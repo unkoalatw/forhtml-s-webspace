@@ -585,30 +585,29 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
+
+        const db = firebase.database();
         let token = localStorage.getItem('antikick_web_token') || '';
         let currentUser = null;
-        let pollTimer = null;
+        // No pollTimer needed
 
         document.addEventListener('DOMContentLoaded', () => {
+            // ... logic same as before but simpler init ...
             if (token) {
-                // 有 GAS token，先用用看
+                // Try to validate token via GAS, but start listener in parallel?
+                // For now, simple flow:
                 api('getStatus').then(res => {
                     if (res && res.success) {
-                        token = res.user.token || token; // update token if refreshed
+                        token = res.user.token || token;
                         currentUser = res.user;
                         initDashboard();
                     } else {
                         // GAS token 失效，檢查 Firebase auth 狀態
-                        auth.onAuthStateChanged(user => {
-                            if (user) syncWithGas(user);
-                            else logout();
-                        });
+                        auth.onAuthStateChanged(user => { if (user) syncWithGas(user); else logout(); });
                     }
                 });
             } else {
-                auth.onAuthStateChanged(user => {
-                    if (user) syncWithGas(user);
-                });
+                auth.onAuthStateChanged(user => { if (user) syncWithGas(user); });
             }
         });
 
@@ -672,7 +671,7 @@
             token = '';
             currentUser = null;
             localStorage.removeItem('antikick_web_token');
-            clearInterval(pollTimer);
+            // clearInterval(pollTimer); // Removed pollTimer
 
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
             document.getElementById('authPage').classList.add('active');
@@ -685,7 +684,7 @@
             showPage('dashboard');
             document.getElementById('bottomNav').style.display = 'flex';
             updateUI(currentUser);
-            startPolling();
+            startListening();
         }
 
         function updateUI(user) {
@@ -695,59 +694,61 @@
             if (user.friendCode) document.getElementById('myCode').textContent = user.friendCode;
         }
 
-        function startPolling() {
-            if (pollTimer) clearInterval(pollTimer);
-            pollStatus();
-            pollTimer = setInterval(pollStatus, 3000);
+        // --- Realtime Listener ---
+        function startListening() {
+            document.getElementById('mainStatusSub').textContent = 'Live Syncing...';
+            const statusRef = db.ref('status');
+            statusRef.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                renderStatus(data);
+            });
+            // Also listen for friends if needed, or stick to GAS fetch for friends to save connections
+            if (currentUser && currentUser.id) {
+                // Optional: listen to friends changes
+            }
         }
 
-        function pollStatus() {
-            if (!token) return;
-            api('getStatus').then(res => {
-                if (res && res.success) {
-                    renderStatus(res);
-                    if (res.friends) renderFriends(res.friends);
-                } else if (res && res.message && res.message.includes('重新登入')) {
-                    // token expired
-                    auth.currentUser ? syncWithGas(auth.currentUser) : logout();
-                }
-            });
-        }
+        // Removed startPolling() and pollStatus()
 
         function renderStatus(data) {
             const icon = document.getElementById('mainStatusIcon');
             const text = document.getElementById('mainStatusText');
             const sub = document.getElementById('mainStatusSub');
+            // ... buttons ...
             const btnOnline = document.getElementById('goOnlineBtn');
             const btnOffline = document.getElementById('goOfflineBtn');
             const btnUrgent = document.getElementById('urgentBtn');
             const connDot = document.getElementById('connDot');
 
             connDot.className = 'pulse-dot';
-            document.getElementById('connText').textContent = 'Connected';
+            document.getElementById('connText').textContent = 'Live';
+
+            const myId = currentUser ? currentUser.id : '';
 
             if (!data.inUse) {
                 icon.textContent = '🛡️';
                 text.textContent = 'Safe to Use';
-                sub.textContent = '目前沒人使用，您可以上線';
+                sub.textContent = '目前沒人使用';
                 btnOnline.style.display = 'block';
                 btnOffline.style.display = 'none';
                 btnUrgent.style.display = 'none';
-            } else if (data.currentUserId === currentUser.id) {
+            } else if (data.currentUserId === myId) {
                 icon.textContent = '⚡';
                 text.textContent = 'You are Online';
                 sub.textContent = '您正在使用帳號';
                 btnOnline.style.display = 'none';
                 btnOffline.style.display = 'block';
                 btnUrgent.style.display = 'none';
-
-                if (data.urgentRequest && data.urgentRequest.from) {
-                    showModal(data.urgentRequest.from);
-                }
+                if (data.urgentRequest && data.urgentRequest.from) showModal(data.urgentRequest.from);
             } else {
                 icon.textContent = '⛔';
                 text.textContent = 'Occupied';
-                sub.textContent = (data.currentUser || 'Someone') + ' 正在使用中';
+                // Async name fetch if needed
+                sub.textContent = '使用中...';
+                if (data.currentUser !== window.lastUsageId) {
+                    db.ref(`users/${data.currentUser}/email`).once('value').then(s => sub.textContent = (s.val() || 'Someone') + ' is using it');
+                    window.lastUsageId = data.currentUser;
+                }
                 btnOnline.style.display = 'none';
                 btnOffline.style.display = 'none';
                 btnUrgent.style.display = 'block';
@@ -755,8 +756,8 @@
             }
         }
 
-        function goOnline() { api('goOnline').then(res => { toast(res.message, !res.success); pollStatus(); }); }
-        function goOffline() { api('goOffline').then(res => { toast(res.message); pollStatus(); }); }
+        function goOnline() { api('goOnline').then(res => { toast(res.message, !res.success); /* pollStatus(); */ }); }
+        function goOffline() { api('goOffline').then(res => { toast(res.message); /* pollStatus(); */ }); }
         function urgentRequest() {
             if (!confirm('確定要發送緊急請求嗎？對方會收到通知。')) return;
             api('sendUrgent').then(res => toast(res.message));
