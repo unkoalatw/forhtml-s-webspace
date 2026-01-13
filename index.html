@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AntiKick Web 2.2 (CORS Fix)</title>
-    
+    <title>AntiKick Web 2.3 (RTDB + AutoDisconnect)</title>
+
     <!-- 這裡直接沿用 App 的所有 CSS，確保視覺 100% 一致 -->
     <style>
         :root {
@@ -456,7 +456,7 @@
         <div id="authPage" class="page active">
             <div class="card" style="text-align: center;">
                 <h2 style="font-size: 24px; margin-bottom: 8px;">歡迎回來</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入 (v2.2 Simple Request)</p>
+                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入 (v2.3 RTDB+Auto)</p>
 
                 <button class="btn btn-google" onclick="handleGoogleLogin()">
                     <svg width="20" height="20" viewBox="0 0 24 24">
@@ -509,7 +509,8 @@
                 <div id="mainStatusSub" class="status-hero-sub">建立連線中...</div>
 
                 <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px;">
-                    <button id="goOnlineBtn" class="btn btn-black" onclick="updateStatus('online')">⚡ 上線 (Go Online)</button>
+                    <button id="goOnlineBtn" class="btn btn-black" onclick="updateStatus('online')">⚡ 上線 (Go
+                        Online)</button>
                     <button id="goOfflineBtn" class="btn btn-black" onclick="updateStatus('offline')"
                         style="display:none; background: var(--text-tertiary);">💤 下線 (Go Offline)</button>
                     <button id="urgentBtn" class="btn btn-outline" onclick="openUrgentConfirm()"
@@ -520,16 +521,19 @@
             </div>
 
             <div class="card" style="padding: 16px;">
-                <h4 style="margin-bottom:12px; color:var(--text-secondary); font-size:12px; text-transform:uppercase;">Current Session</h4>
+                <h4 style="margin-bottom:12px; color:var(--text-secondary); font-size:12px; text-transform:uppercase;">
+                    Current Session</h4>
                 <div
                     style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                     <span style="color: var(--text-secondary);">使用者</span>
-                    <span id="currentUserDisplay" style="font-weight: 700; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">--</span>
+                    <span id="currentUserDisplay"
+                        style="font-weight: 700; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">--</span>
                 </div>
-                 <div
+                <div
                     style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
                     <span style="color: var(--text-secondary);">GAS Status</span>
-                    <span id="gasStatusDisplay" style="font-weight: 500; font-size:12px; color:var(--text-tertiary)">Idle</span>
+                    <span id="gasStatusDisplay"
+                        style="font-weight: 500; font-size:12px; color:var(--text-tertiary)">Idle</span>
                 </div>
             </div>
         </div>
@@ -564,7 +568,7 @@
                     <label class="input-label">Email / ID</label>
                     <div id="settingsName" style="font-size: 18px; font-weight: 600; word-break: break-all;">--</div>
                 </div>
-                 <div class="input-group">
+                <div class="input-group">
                     <label class="input-label">狀態</label>
                     <div style="font-size: 14px; color: var(--status-online);">● 系統正常運作中</div>
                 </div>
@@ -610,46 +614,47 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // 加入 onDisconnect 引用
+        import { getDatabase, ref, set, get, onValue, update, remove, child, onDisconnect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         // --- Configuration ---
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_GAC_2akiMeTt-URuBnshDWqKI3arvkut9uuwA22nrfGNjP1ItqcIuDKnb893OxWL/exec';
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9UtCVLFiJbM69ZViWjI7Vc-0RLm39zYc",
+            authDomain: "antikick-a0da3.firebaseapp.com",
+            databaseURL: "https://antikick-a0da3-default-rtdb.firebaseio.com",
+            projectId: "antikick-a0da3",
+            storageBucket: "antikick-a0da3.firebasestorage.app",
+            messagingSenderId: "260741206992",
+            appId: "1:260741206992:web:ce31872bc9776f87c31fd5"
+        };
+
         // Init
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        const db = getDatabase(app);
 
         // Global State
         let currentUser = null;
         let gasToken = localStorage.getItem('antikick_gas_token') || '';
         let unsubscribeStatus = null;
         let unsubscribeFriends = null;
-        
-        const statusCollection = 'status';
-        const statusDocId = 'global';
-        
+
         // --- Auth Logic ---
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            }
-        };
 
         // Listen for Auth Changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'main');
-                setDoc(userRef, {
+                const userRef = ref(db, 'users/' + user.uid);
+                // 建議 Android App 端也要讀取這個 path，確保 ID 欄位名稱一致 (uid vs id)
+                update(userRef, {
                     email: user.email || 'Guest',
                     uid: user.uid,
                     lastSeen: new Date().toISOString()
-                }, { merge: true });
+                });
 
-                // Sync with GAS using modern API
                 syncWithGas(user);
 
                 initDashboard();
@@ -660,33 +665,28 @@
                 currentUser = null;
                 showPage('auth');
                 document.getElementById('bottomNav').style.display = 'none';
-                if(unsubscribeStatus) unsubscribeStatus();
-                if(unsubscribeFriends) unsubscribeFriends();
+                if (unsubscribeStatus) unsubscribeStatus();
+                // 斷線時也建議執行這行，雖然 Firebase 內部會斷開，但前端狀態清空比較保險
+                unsubscribeStatus = null;
             }
         });
 
-        initAuth();
-
         // --- CORS-Compliant API (Simple Request Strategy) ---
-        // 指南核心：使用「簡單請求」避免預檢 (OPTIONS) 請求失敗
         async function api(action, data = {}) {
             document.getElementById('gasStatusDisplay').textContent = 'Syncing ' + action + '...';
-            
-            const payload = { 
-                action, 
-                token: gasToken, 
-                ...data 
+
+            const payload = {
+                action,
+                token: gasToken,
+                ...data
             };
 
-            // 策略：使用 text/plain 以符合 CORS 簡單請求定義
-            // 這避免了瀏覽器發送 OPTIONS 預檢請求，因為 GAS 通常無法正確處理預檢
             try {
-                // 如果是 GET，GAS 支援 CORS redirect，如果是 POST，我們使用 text/plain
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'cors', // 嘗試標準 CORS
+                    mode: 'cors',
                     headers: {
-                        'Content-Type': 'text/plain;charset=utf-8' // 關鍵：這是 Simple Request 白名單內的 Header
+                        'Content-Type': 'text/plain;charset=utf-8'
                     },
                     body: JSON.stringify(payload)
                 });
@@ -694,21 +694,16 @@
                 if (!response.ok) throw new Error('Network Error: ' + response.status);
 
                 const text = await response.text();
-                
-                // 處理 GAS 可能回傳的 JSONP 格式 (legacy support)
-                // 例如: callback({...})
                 let result;
                 try {
                     result = JSON.parse(text);
                 } catch (e) {
-                    // 嘗試剝離 JSONP wrapper
                     const jsonMatch = text.match(/^[^(]*\((.*)\)[^)]*$/);
                     if (jsonMatch && jsonMatch[1]) {
-                         result = JSON.parse(jsonMatch[1]);
+                        result = JSON.parse(jsonMatch[1]);
                     } else {
-                         // Fallback: 可能是純文字或 HTML 錯誤
-                         console.warn("Non-JSON response:", text);
-                         result = { success: false, message: 'Parse Error' };
+                        console.warn("Non-JSON response:", text);
+                        result = { success: false, message: 'Parse Error' };
                     }
                 }
 
@@ -730,21 +725,20 @@
             };
 
             api('firebaseLogin', payload).then(res => {
-                if (res.success && res.token) {
+                if (res && res.success && res.token) {
                     gasToken = res.token;
                     localStorage.setItem('antikick_gas_token', gasToken);
-                    console.log('GAS Synced');
                 }
             });
         }
 
-        // --- Global Functions for HTML ---
+        // --- Global Functions for HTML Buttons ---
         window.handleGuestLogin = () => signInAnonymously(auth).catch(e => toast(e.message, true));
         window.handleLogout = () => signOut(auth).then(() => {
-             document.getElementById('authPage').classList.add('active');
-             updateConnStatus('offline');
-             localStorage.removeItem('antikick_gas_token');
-             gasToken = '';
+            document.getElementById('authPage').classList.add('active');
+            updateConnStatus('offline');
+            localStorage.removeItem('antikick_gas_token');
+            gasToken = '';
         });
 
         window.handleGoogleLogin = async () => {
@@ -752,10 +746,10 @@
             try {
                 await signInWithPopup(auth, provider);
             } catch (error) {
-                // Domain Error Handling (保留此修正)
                 if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                     toast('預覽環境不支援 Google 驗證，切換為訪客登入', true);
-                     signInAnonymously(auth);
+                    // 自動降級為訪客，提升體驗
+                    toast('預覽環境切換為訪客登入', true);
+                    signInAnonymously(auth);
                 } else {
                     toast('登入失敗: ' + error.message, true);
                 }
@@ -772,10 +766,10 @@
             } catch (error) {
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                     try {
-                         await createUserWithEmailAndPassword(auth, email, password);
-                         toast('註冊並登入成功');
+                        await createUserWithEmailAndPassword(auth, email, password);
+                        toast('註冊並登入成功');
                     } catch (createErr) {
-                         toast(createErr.message, true);
+                        toast(createErr.message, true);
                     }
                 } else {
                     toast(error.message, true);
@@ -788,20 +782,20 @@
             document.getElementById('emailBtn').style.display = show ? 'none' : 'block';
         };
 
-        // --- Core App Logic ---
-        
+        // --- Core App Logic (Using Realtime Database) ---
+
         function initDashboard() {
             if (!currentUser) return;
-            
-            const displayId = currentUser.email || 'Guest (' + currentUser.uid.slice(0, 4) + ')';
+
+            const displayId = currentUser.email || 'Guest';
             document.getElementById('currentUserDisplay').textContent = displayId;
             document.getElementById('settingsName').textContent = displayId;
             document.getElementById('myCode').textContent = currentUser.uid;
 
-            const statusRef = doc(db, 'artifacts', appId, 'public', 'data', statusCollection, statusDocId);
-            
-            unsubscribeStatus = onSnapshot(statusRef, (docSnap) => {
-                const data = docSnap.exists() ? docSnap.data() : { inUse: false };
+            const statusRef = ref(db, 'status');
+
+            unsubscribeStatus = onValue(statusRef, (snapshot) => {
+                const data = snapshot.val() || { inUse: false };
                 renderStatus(data);
                 updateConnStatus('online');
             }, (error) => {
@@ -843,21 +837,21 @@
                 btnOffline.style.display = 'none';
                 btnUrgent.style.display = 'none';
                 document.body.style.backgroundColor = 'var(--bg-app)';
-            } else if (data.currentUid === currentUser.uid) {
+            } else if (data.currentUserId === currentUser.uid) {
                 icon.textContent = '⚡';
                 text.textContent = 'You are Online';
                 sub.textContent = '您正在使用帳號';
                 btnOnline.style.display = 'none';
                 btnOffline.style.display = 'flex';
                 btnUrgent.style.display = 'none';
-                
-                if (data.urgentRequest && data.urgentRequest.active && data.urgentRequest.fromUid !== currentUser.uid) {
-                    showUrgentModal(data.urgentRequest.fromName || 'Someone');
+
+                if (data.urgentRequest && data.urgentRequest.from) {
+                    showUrgentModal(data.urgentRequest.from);
                 }
             } else {
                 icon.textContent = '⛔';
                 text.textContent = 'Occupied';
-                const userName = data.currentName || 'Someone';
+                const userName = data.currentUser || 'Someone';
                 sub.textContent = `${userName} 正在使用中`;
                 btnOnline.style.display = 'none';
                 btnOffline.style.display = 'none';
@@ -865,32 +859,46 @@
             }
         }
 
-        // --- Actions (Hybrid: Call GAS + Update Firestore) ---
+        // --- Actions ---
 
         window.updateStatus = async (action) => {
-            const statusRef = doc(db, 'artifacts', appId, 'public', 'data', statusCollection, statusDocId);
+            const statusRef = ref(db, 'status');
             const userEmail = currentUser.email || 'Guest';
 
             try {
                 if (action === 'online') {
                     api('goOnline'); // Call GAS
-                    await setDoc(statusRef, {
+                    // Optimistic update
+                    await update(statusRef, {
                         inUse: true,
-                        currentUid: currentUser.uid,
-                        currentName: userEmail,
-                        timestamp: new Date().toISOString(),
-                        urgentRequest: { active: false }
+                        currentUserId: currentUser.uid,
+                        currentUser: userEmail,
+                        timestamp: Date.now()
                     });
-                    toast('已上線 (Synced)');
+                    
+                    // --- 關鍵補充: onDisconnect ---
+                    // 這是 RTDB 最大的優勢，當網頁關閉或斷網時，自動將狀態改回 false
+                    // 這樣才不會因為使用者直接關掉視窗而導致狀態卡死
+                    const onDisconnectRef = onDisconnect(statusRef);
+                    await onDisconnectRef.update({
+                        inUse: false,
+                        currentUserId: null,
+                        currentUser: null
+                    });
+                    
+                    toast('已上線');
                 } else if (action === 'offline') {
                     api('goOffline'); // Call GAS
-                    await setDoc(statusRef, {
+                    await update(statusRef, {
                         inUse: false,
-                        currentUid: null,
-                        currentName: null,
-                        urgentRequest: { active: false }
+                        currentUserId: null,
+                        currentUser: null
                     });
-                    toast('已下線 (Synced)');
+                    // 手動下線後，取消 onDisconnect 監聽 (雖然保留也無害，但取消比較乾淨)
+                    const onDisconnectRef = onDisconnect(statusRef);
+                    onDisconnectRef.cancel();
+
+                    toast('已下線');
                 }
             } catch (e) {
                 toast('操作失敗: ' + e.message, true);
@@ -898,8 +906,6 @@
         };
 
         // Urgent Logic
-        let currentUrgentRequestFrom = null;
-
         window.openUrgentConfirm = () => {
             const modal = document.getElementById('confirmModal');
             document.getElementById('confirmText').textContent = '確定要發送緊急插隊通知嗎？對方會收到彈窗。';
@@ -911,21 +917,16 @@
         }
 
         window.closeConfirm = () => {
-             document.getElementById('confirmModal').classList.remove('active');
+            document.getElementById('confirmModal').classList.remove('active');
         }
 
         async function sendUrgentRequest() {
-            const statusRef = doc(db, 'artifacts', appId, 'public', 'data', statusCollection, statusDocId);
+            api('sendUrgent');
+            const statusRef = ref(db, 'status/urgentRequest');
             try {
-                api('sendUrgent');
-                
-                await updateDoc(statusRef, {
-                    urgentRequest: {
-                        active: true,
-                        fromUid: currentUser.uid,
-                        fromName: currentUser.email || 'Guest',
-                        timestamp: new Date().toISOString()
-                    }
+                await set(statusRef, {
+                    from: currentUser.email || 'Guest',
+                    timestamp: Date.now()
                 });
                 toast('已發送緊急通知');
             } catch (e) {
@@ -935,8 +936,8 @@
 
         function showUrgentModal(who) {
             const modal = document.getElementById('urgentModal');
-            if (modal.classList.contains('active')) return; 
-            
+            if (modal.classList.contains('active')) return;
+
             document.getElementById('urgentText').textContent = `${who} 急需使用，是否讓位？`;
             modal.classList.add('active');
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
@@ -949,65 +950,66 @@
                 toast('您已讓位下線');
             } else {
                 api('declineUrgent');
-                const statusRef = doc(db, 'artifacts', appId, 'public', 'data', statusCollection, statusDocId);
-                await updateDoc(statusRef, { "urgentRequest.active": false });
+                const statusRef = ref(db, 'status/urgentRequest');
+                await remove(statusRef);
                 toast('已拒絕請求');
             }
         };
 
         // --- Friends Logic ---
-        
         function loadFriends() {
-             const friendsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'friends');
-             unsubscribeFriends = onSnapshot(friendsRef, (snapshot) => {
-                 const list = document.getElementById('friendsList');
-                 list.innerHTML = '';
-                 if (snapshot.empty) {
-                     list.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); padding:20px;">尚無好友</div>';
-                     return;
-                 }
-                 snapshot.forEach(doc => {
-                     const f = doc.data();
-                     const div = document.createElement('div');
-                     div.className = 'friend-row';
-                     div.innerHTML = `
+            const friendsRef = ref(db, 'users/' + currentUser.uid + '/friends');
+            unsubscribeFriends = onValue(friendsRef, (snapshot) => {
+                const list = document.getElementById('friendsList');
+                list.innerHTML = '';
+
+                const val = snapshot.val();
+                if (!val) {
+                    list.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); padding:20px;">尚無好友</div>';
+                    return;
+                }
+
+                Object.keys(val).forEach(key => {
+                    const f = val[key];
+                    const div = document.createElement('div');
+                    div.className = 'friend-row';
+                    div.innerHTML = `
                         <div>
-                            <div style="font-weight:600; font-size:14px;">${f.name || 'Unknown'}</div>
-                            <div style="font-size:12px; color:#999;">${f.uid}</div>
+                            <div style="font-weight:600; font-size:14px;">${f.name || f.email || 'Friend'}</div>
+                            <div style="font-size:12px; color:#999;">${f.friendCode || key}</div>
                         </div>
-                        <button class="btn-text" style="color:#EF4444;" onclick="removeFriend('${doc.id}')">移除</button>
+                        <button class="btn-text" style="color:#EF4444;" onclick="removeFriend('${key}')">移除</button>
                     `;
                     list.appendChild(div);
-                 });
-             });
+                });
+            });
         }
 
         window.addFriend = async () => {
             const input = document.getElementById('friendCodeInput');
             const targetUid = input.value.trim();
             if (!targetUid) return toast('請輸入 ID', true);
-            if (targetUid === currentUser.uid) return toast('不能加自己', true);
 
             api('addFriend', { friendCode: targetUid });
 
-            const friendRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'friends', targetUid);
+            // Optimistic update
+            const friendRef = ref(db, 'users/' + currentUser.uid + '/friends/' + targetUid);
             try {
-                await setDoc(friendRef, {
-                    uid: targetUid,
-                    name: 'Friend ' + targetUid.slice(0, 4), 
-                    addedAt: new Date().toISOString()
+                await set(friendRef, {
+                    friendCode: targetUid,
+                    name: 'Friend ' + targetUid.slice(0, 4)
                 });
                 input.value = '';
                 toast('好友已加入');
             } catch (e) {
-                toast('加入失敗', true);
+                toast('加入失敗 (Check Rules)', true);
             }
         };
 
         window.removeFriend = async (fid) => {
             api('removeFriend', { friendId: fid });
-            const friendRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'friends', fid);
-            await deleteDoc(friendRef);
+            const friendRef = ref(db, 'users/' + currentUser.uid + '/friends/' + fid);
+            await remove(friendRef);
             toast('已移除');
         };
 
