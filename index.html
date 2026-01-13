@@ -378,7 +378,7 @@
             display: inline-block;
             transition: 0.2s;
         }
-        
+
         .code-badge:active {
             background: #e5e5e5;
             transform: scale(0.95);
@@ -436,9 +436,11 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
-        
+
         /* Modal for generic confirmation */
-        #confirmModal .modal-h2 { color: var(--text-primary); }
+        #confirmModal .modal-h2 {
+            color: var(--text-primary);
+        }
     </style>
 </head>
 
@@ -551,7 +553,7 @@
                 <input type="text" id="friendCodeInput" class="input-field" placeholder="輸入好友 ID">
                 <button class="btn btn-black" style="margin-top: 12px;" onclick="addFriend()">加入好友</button>
             </div>
-            
+
             <div class="list-header">
                 <span class="list-title">好友列表</span>
             </div>
@@ -618,7 +620,7 @@
         import { getDatabase, ref, set, get, onValue, update, remove, child, onDisconnect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         // --- Configuration ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_GAC_2akiMeTt-URuBnshDWqKI3arvkut9uuwA22nrfGNjP1ItqcIuDKnb893OxWL/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwYmhhdVdSqnLqrPOZPbeLZ1Yq4M9lSQYy-My8lITeNiVHxzDo8_kFK6AuoHLyMfeEh/exec';
 
         const firebaseConfig = {
             apiKey: "AIzaSyA9UtCVLFiJbM69ZViWjI7Vc-0RLm39zYc",
@@ -875,7 +877,7 @@
                         currentUser: userEmail,
                         timestamp: Date.now()
                     });
-                    
+
                     // --- 關鍵補充: onDisconnect ---
                     // 這是 RTDB 最大的優勢，當網頁關閉或斷網時，自動將狀態改回 false
                     // 這樣才不會因為使用者直接關掉視窗而導致狀態卡死
@@ -885,7 +887,7 @@
                         currentUserId: null,
                         currentUser: null
                     });
-                    
+
                     toast('已上線');
                 } else if (action === 'offline') {
                     api('goOffline'); // Call GAS
