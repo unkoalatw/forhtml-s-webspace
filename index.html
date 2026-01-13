@@ -1,867 +1,521 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AntiKick Web</title>
-    <!-- Firebase SDK (Web) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-
-    <!-- 這裡直接沿用 App 的所有 CSS，確保視覺 100% 一致 -->
-    <style>
-        :root {
-            --bg-app: #FAFAFA;
-            --bg-card: #FFFFFF;
-            --text-primary: #171717;
-            --text-secondary: #737373;
-            --text-tertiary: #A3A3A3;
-            --accent: #171717;
-            --accent-hover: #404040;
-            --accent-bg: #F5F5F5;
-            --status-online: #22C55E;
-            --status-busy: #EF4444;
-            --status-offline: #D4D4D4;
-            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
-            --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
-            --radius-l: 24px;
-            --radius-m: 16px;
-            --radius-s: 12px;
-            --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-            --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: var(--font-main);
-            background-color: var(--bg-app);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            padding-bottom: 100px;
-        }
-
-        .container {
-            max-width: 460px;
-            margin: 0 auto;
-            padding: 24px 20px;
-            width: 100%;
-        }
-
-        .header {
-            padding: 40px 8px 20px 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .app-title {
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -1px;
-            line-height: 1;
-        }
-
-        .connection-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--status-online);
-            position: relative;
-        }
-
-        .pulse-dot.danger {
-            background-color: var(--status-busy);
-        }
-
-        .pulse-dot.offline {
-            background-color: var(--status-offline);
-        }
-
-        .pulse-dot::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 50%;
-            background-color: inherit;
-            opacity: 0.4;
-            animation: pulse-ring 2s infinite;
-        }
-
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(1);
-                opacity: 0.4;
-            }
-
-            100% {
-                transform: scale(3);
-                opacity: 0;
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border-radius: var(--radius-l);
-            box-shadow: var(--shadow-subtle);
-            padding: 24px;
-            margin-bottom: 20px;
-            transition: transform 0.2s var(--ease-spring);
-        }
-
-        .status-card {
-            text-align: center;
-            padding: 40px 24px;
-        }
-
-        .status-hero-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            display: inline-block;
-        }
-
-        .status-hero-text {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .status-hero-sub {
-            font-size: 15px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border-radius: var(--radius-m);
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-family: inherit;
-            letter-spacing: -0.2px;
-            margin-bottom: 12px;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
-        }
-
-        .btn-black {
-            background-color: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-google {
-            background-color: #4285F4;
-            color: white;
-            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--accent-bg);
-            color: var(--text-secondary);
-        }
-
-        .btn-text {
-            background: transparent;
-            color: var(--text-secondary);
-            font-size: 14px;
-            padding: 8px;
-            margin-bottom: 0;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 16px;
-            border-radius: var(--radius-m);
-            border: 2px solid var(--accent-bg);
-            background: var(--bg-card);
-            font-size: 16px;
-            color: var(--text-primary);
-            outline: none;
-            transition: all 0.2s;
-            -webkit-appearance: none;
-        }
-
-        .input-field:focus {
-            border-color: var(--accent);
-            background: var(--bg-app);
-        }
-
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 16px;
-            padding: 0 4px;
-        }
-
-        .list-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .friend-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px;
-            background: var(--bg-card);
-            border-radius: var(--radius-m);
-            margin-bottom: 12px;
-            box-shadow: var(--shadow-subtle);
-        }
-
-        .nav-bar {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            border-radius: 100px;
-            box-shadow: var(--shadow-float);
-            padding: 6px;
-            display: flex;
-            z-index: 100;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            max-width: 90%;
-        }
-
-        .nav-tab {
-            padding: 12px 24px;
-            border-radius: 100px;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            background: transparent;
-        }
-
-        .nav-tab.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 200;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: 0.3s;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-box {
-            background: white;
-            padding: 32px;
-            border-radius: 32px;
-            width: 85%;
-            max-width: 340px;
-            text-align: center;
-            box-shadow: var(--shadow-float);
-            transform: scale(0.9);
-            transition: 0.3s var(--ease-spring);
-        }
-
-        .modal-overlay.active .modal-box {
-            transform: scale(1);
-        }
-
-        .modal-h2 {
-            font-size: 20px;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .modal-p {
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-
-        .page {
-            display: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s;
-        }
-
-        .page.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .code-badge {
-            background: var(--accent-bg);
-            padding: 8px 16px;
-            border-radius: var(--radius-s);
-            font-family: monospace;
-            font-size: 16px;
-            letter-spacing: 1px;
-            color: var(--text-primary);
-            cursor: pointer;
-            margin-top: 12px;
-            display: inline-block;
-        }
-
-        .or-divider {
-            text-align: center;
-            margin: 20px 0;
-            color: var(--text-tertiary);
-            font-size: 13px;
-            position: relative;
-        }
-
-        .or-divider::before,
-        .or-divider::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: #E5E5E5;
-        }
-
-        .or-divider::before {
-            left: 0;
-        }
-
-        .or-divider::after {
-            right: 0;
-        }
-
-        #toast {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: white;
-            color: var(--text-primary);
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: var(--shadow-float);
-            opacity: 0;
-            transition: all 0.4s var(--ease-spring);
-            z-index: 300;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        #toast.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="app-title">AntiKick</div>
-            <div class="connection-indicator">
-                <div id="connDot" class="pulse-dot offline"></div>
-                <span id="connText">Waiting</span>
-            </div>
-        </div>
-
-        <!-- AUTH PAGE -->
-        <div id="authPage" class="page active">
-            <div class="card" style="text-align: center;">
-                <h2 style="font-size: 24px; margin-bottom: 8px;">歡迎回來</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入</p>
-
-                <button class="btn btn-google" onclick="triggerWebAuth('google')">
-                    <svg width="20" height="20" viewBox="0 0 24 24">
-                        <path
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            fill="#FFF" />
-                        <path
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            fill="#FFF" />
-                        <path
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z"
-                            fill="#FFF" />
-                        <path
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                            fill="#FFF" />
-                    </svg>
-                    使用 Google 登入
-                </button>
-
-                <div class="or-divider">或者</div>
-
-                <div id="emailForm" style="display: none; text-align: left; margin-bottom: 20px;">
-                    <div class="input-group">
-                        <label class="input-label">Email</label>
-                        <input type="email" id="email" class="input-field" placeholder="name@example.com">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">Password</label>
-                        <input type="password" id="password" class="input-field" placeholder="••••••••">
-                    </div>
-                    <button class="btn btn-black" onclick="triggerWebAuth('email')">登入 / 註冊</button>
-                    <button class="btn btn-text" onclick="toggleEmailForm(false)">返回</button>
-                </div>
-
-                <button id="emailBtn" class="btn btn-outline" onclick="toggleEmailForm(true)">
-                    使用 Email 登入
-                </button>
-
-                <button class="btn btn-text" onclick="triggerWebAuth('anon')">
-                    以訪客身分繼續
-                </button>
-            </div>
-        </div>
-
-        <!-- DASHBOARD -->
-        <div id="dashboardPage" class="page">
-            <div class="card status-card">
-                <div id="mainStatusIcon" class="status-hero-icon">🛡️</div>
-                <div id="mainStatusText" class="status-hero-text">Checking...</div>
-                <div id="mainStatusSub" class="status-hero-sub">同步中...</div>
-
-                <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px;">
-                    <button id="goOnlineBtn" class="btn btn-black" onclick="goOnline()">⚡ 上線 (Go Online)</button>
-                    <button id="goOfflineBtn" class="btn btn-black" onclick="goOffline()"
-                        style="display:none; background: var(--text-tertiary);">💤 下線 (Go Offline)</button>
-                    <button id="urgentBtn" class="btn btn-outline" onclick="urgentRequest()"
-                        style="display:none; border-color: var(--status-busy); color: var(--status-busy);">
-                        ⚠️ 發送緊急請求
-                    </button>
-                </div>
-            </div>
-
-            <div class="card" style="padding: 16px;">
-                <h4 style="margin-bottom:12px; color:var(--text-secondary);">Current Session</h4>
-                <div
-                    style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                    <span style="color: var(--text-secondary);">使用者</span>
-                    <span id="currentUserDisplay" style="font-weight: 700;">--</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- FRIENDS -->
-        <div id="friendsPage" class="page">
-            <div class="card" style="text-align: center;">
-                <div style="color: var(--text-secondary); margin-bottom: 8px;">您的好友代碼</div>
-                <div id="myCode" class="code-badge" onclick="copyCode(this.textContent)">------</div>
-            </div>
-
-            <div class="input-group">
-                <input type="text" id="friendCodeInput" class="input-field" placeholder="輸入好友代碼">
-                <button class="btn btn-black" style="margin-top: 12px;" onclick="addFriend()">加入好友</button>
-            </div>
-            <div id="friendsList"></div>
-        </div>
-
-        <!-- SETTINGS -->
-        <div id="settingsPage" class="page">
-            <div class="card">
-                <h3 style="margin-bottom: 16px;">帳號資訊</h3>
-                <div class="input-group">
-                    <label class="input-label">Email</label>
-                    <div id="settingsName" style="font-size: 18px; font-weight: 600;">--</div>
-                </div>
-            </div>
-            <button class="btn btn-outline" onclick="logout()">登出</button>
-        </div>
-    </div>
-
-    <!-- Bottom Nav -->
-    <div id="bottomNav" class="nav-bar" style="display: none;">
-        <button class="nav-tab active" onclick="showPage('dashboard')">Home</button>
-        <button class="nav-tab" onclick="showPage('friends')">Friends</button>
-        <button class="nav-tab" onclick="showPage('settings')">Settings</button>
-    </div>
-
-    <!-- Modal & Toast -->
-    <div id="urgentModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-h2">緊急插隊請求</div>
-            <p id="urgentText" class="modal-p">有人急需使用，是否讓位？</p>
-            <div style="display: flex; gap: 12px;">
-                <button class="btn btn-black" onclick="respondUrgent(true)">確認讓位</button>
-                <button class="btn btn-outline" onclick="respondUrgent(false)">拒絕</button>
-            </div>
-        </div>
-    </div>
-    <div id="toast" class="toast-msg"><span>✓</span> <span id="toastText">Success</span></div>
-
-    <script>
-        // === CONFIGURATION ===
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx_GAC_2akiMeTt-URuBnshDWqKI3arvkut9uuwA22nrfGNjP1ItqcIuDKnb893OxWL/exec';
-
-        // 這是 Web 專用的 Firebase Config (從您的 google-services.json 提取)
-        const firebaseConfig = {
-            apiKey: "AIzaSyA9UtCVLFiJbM69ZViWjI7Vc-0RLm39zYc",
-            authDomain: "antikick-a0da3.firebaseapp.com",
-            projectId: "antikick-a0da3",
-            databaseURL: "https://antikick-a0da3-default-rtdb.firebaseio.com",
-            storageBucket: "antikick-a0da3.firebasestorage.app",
-            messagingSenderId: "260741206992",
-            appId: "1:260741206992:web:placeholder"
-        };
-        // ======================
-
-        // Note: AppId for Web might differ from Android, but usually compatible for Auth.
-        // Ideally check google-services.json -> client[0].oauth_client[0].client_id (Web client)
-
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const auth = firebase.auth();
-
-        let token = localStorage.getItem('antikick_web_token') || '';
-        let currentUser = null;
-        // No pollTimer needed
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiUrlInput').value = GAS_URL;
-            // Web Token Logi
-            if (token) {
-                api('getStatus').then(res => {
-                    if (res && res.success) {
-                        token = res.user.token || token;
-                        currentUser = res.user;
-                        initDashboard();
-                    } else {
-                        // GAS token invalid, check Firebase
-                        auth.onAuthStateChanged(user => { if (user) syncWithGas(user); else logout(); });
-                    }
-                });
-            } else {
-                auth.onAuthStateChanged(user => { if (user) syncWithGas(user); });
-            }
-        });
-
-        // --- Auth Logic ---
-        function triggerWebAuth(type) {
-            if (type === 'google') {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                auth.signInWithPopup(provider).catch(handleAuthError);
-            } else if (type === 'anon') {
-                auth.signInAnonymously().catch(handleAuthError);
-            } else if (type === 'email') {
-                const e = document.getElementById('email').value;
-                const p = document.getElementById('password').value;
-                if (!e || !p) return toast('請輸入 Email 和密碼', true);
-
-                auth.signInWithEmailAndPassword(e, p).then(user => {
-                    // Logic handled in onAuthStateChanged
-                }).catch(err => {
-                    if (err.code === 'auth/user-not-found') {
-                        // Auto register
-                        auth.createUserWithEmailAndPassword(e, p).catch(handleAuthError);
-                    } else {
-                        handleAuthError(err);
-                    }
-                });
-            }
-        }
-
-        function handleAuthError(error) {
-            console.error(error);
-            toast('登入錯誤: ' + error.message, true);
-        }
-
-        function syncWithGas(firebaseUser) {
-            document.getElementById('connText').textContent = 'Syncing...';
-            // 使用 JSONP 呼叫 GAS firebaseLogin
-            // 注意：我們不透過 api() 因為那時候可能還沒 token
-            const payload = {
-                action: 'firebaseLogin',
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                isAnonymous: firebaseUser.isAnonymous,
-                fcmToken: '' // Web 不支援 FCM 推播接收
-            };
-
-            jsonp(GAS_URL, payload, (res) => {
-                if (res.success) {
-                    token = res.token;
-                    currentUser = res.user;
-                    localStorage.setItem('antikick_web_token', token);
-                    initDashboard();
-                    toast('登入成功');
-                } else {
-                    toast('同步失敗: ' + res.message, true);
-                }
-            });
-        }
-
-        function logout() {
-            auth.signOut();
-            token = '';
-            currentUser = null;
-            localStorage.removeItem('antikick_web_token');
-            // clearInterval(pollTimer); // Removed pollTimer
-
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById('authPage').classList.add('active');
-            document.getElementById('bottomNav').style.display = 'none';
-        }
-
-        // --- App Logic ---
-
-        function initDashboard() {
-            showPage('dashboard');
-            document.getElementById('bottomNav').style.display = 'flex';
-            updateUI(currentUser);
-            startListening();
-        }
-
-        function updateUI(user) {
-            if (!user) return;
-            document.getElementById('currentUserDisplay').textContent = user.email || 'Guest';
-            document.getElementById('settingsName').textContent = user.email || 'Guest';
-            if (user.friendCode) document.getElementById('myCode').textContent = user.friendCode;
-        }
-
-        // --- Realtime Listener ---
-        function startListening() {
-            document.getElementById('mainStatusSub').textContent = 'Live Syncing...';
-            const statusRef = db.ref('status');
-            statusRef.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                renderStatus(data);
-            });
-            // Also listen for friends if needed, or stick to GAS fetch for friends to save connections
-            if (currentUser && currentUser.id) {
-                // Optional: listen to friends changes
-            }
-        }
-
-        // Removed startPolling() and pollStatus()
-
-        function renderStatus(data) {
-            const icon = document.getElementById('mainStatusIcon');
-            const text = document.getElementById('mainStatusText');
-            const sub = document.getElementById('mainStatusSub');
-            // ... buttons ...
-            const btnOnline = document.getElementById('goOnlineBtn');
-            const btnOffline = document.getElementById('goOfflineBtn');
-            const btnUrgent = document.getElementById('urgentBtn');
-            const connDot = document.getElementById('connDot');
-
-            connDot.className = 'pulse-dot';
-            document.getElementById('connText').textContent = 'Live';
-
-            const myId = currentUser ? currentUser.id : '';
-
-            if (!data.inUse) {
-                icon.textContent = '🛡️';
-                text.textContent = 'Safe to Use';
-                sub.textContent = '目前沒人使用';
-                btnOnline.style.display = 'block';
-                btnOffline.style.display = 'none';
-                btnUrgent.style.display = 'none';
-            } else if (data.currentUserId === myId) {
-                icon.textContent = '⚡';
-                text.textContent = 'You are Online';
-                sub.textContent = '您正在使用帳號';
-                btnOnline.style.display = 'none';
-                btnOffline.style.display = 'block';
-                btnUrgent.style.display = 'none';
-                if (data.urgentRequest && data.urgentRequest.from) showModal(data.urgentRequest.from);
-            } else {
-                icon.textContent = '⛔';
-                text.textContent = 'Occupied';
-                // Async name fetch if needed
-                sub.textContent = '使用中...';
-                if (data.currentUser !== window.lastUsageId) {
-                    db.ref(`users/${data.currentUser}/email`).once('value').then(s => sub.textContent = (s.val() || 'Someone') + ' is using it');
-                    window.lastUsageId = data.currentUser;
-                }
-                btnOnline.style.display = 'none';
-                btnOffline.style.display = 'none';
-                btnUrgent.style.display = 'block';
-                connDot.className = 'pulse-dot danger';
-            }
-        }
-
-        function goOnline() { api('goOnline').then(res => { toast(res.message, !res.success); /* pollStatus(); */ }); }
-        function goOffline() { api('goOffline').then(res => { toast(res.message); /* pollStatus(); */ }); }
-        function urgentRequest() {
-            if (!confirm('確定要發送緊急請求嗎？對方會收到通知。')) return;
-            api('sendUrgent').then(res => toast(res.message));
-        }
-
-        function addFriend() {
-            const code = document.getElementById('friendCodeInput').value;
-            if (!code) return;
-            api('addFriend', { friendCode: code }).then(res => {
-                toast(res.message, !res.success);
-                document.getElementById('friendCodeInput').value = '';
-                pollStatus();
-            });
-        }
-
-        function renderFriends(list) {
-            const container = document.getElementById('friendsList');
-            container.innerHTML = '';
-            list.forEach(f => {
-                const div = document.createElement('div');
-                div.className = 'friend-row';
-                div.innerHTML = `
-                    <div>
-                        <div style="font-weight:600;">${f.email}</div>
-                        <div style="font-size:12px; color:#999;">${f.friendCode}</div>
-                    </div>
-                    <button class="btn-text" style="color:red;" onclick="removeFriend('${f.id}')">移除</button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function removeFriend(fid) {
-            if (!confirm('移除好友？')) return;
-            api('removeFriend', { friendId: fid }).then(res => { toast(res.message); pollStatus(); });
-        }
-
-        // --- Helper: JSONP for GAS CORS ---
-        function api(action, data = {}) {
-            return new Promise(resolve => {
-                const payload = { action, token, ...data };
-                jsonp(GAS_URL, payload, resolve);
-            });
-        }
-
-        function jsonp(url, data, callback) {
-            const cbName = 'jsonp_' + Math.round(100000 * Math.random());
-            window[cbName] = function (data) {
-                delete window[cbName];
-                document.body.removeChild(script);
-                callback(data);
-            };
-
-            let queryString = '';
-            try {
-                const payload = JSON.stringify(data);
-                queryString = 'data=' + encodeURIComponent(payload);
-            } catch (e) { }
-
-            const script = document.createElement('script');
-            script.src = `${url}?${queryString}&callback=${cbName}`;
-            document.body.appendChild(script);
-        }
-
-        // --- UI Helpers ---
-        function showPage(name) {
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById(name + 'Page').classList.add('active');
-
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-            if (name === 'dashboard') document.querySelector('.nav-tab:nth-child(1)').classList.add('active');
-            if (name === 'friends') document.querySelector('.nav-tab:nth-child(2)').classList.add('active');
-            if (name === 'settings') document.querySelector('.nav-tab:nth-child(3)').classList.add('active');
-        }
-
-        function toggleEmailForm(show) {
-            document.getElementById('emailForm').style.display = show ? 'block' : 'none';
-            document.getElementById('emailBtn').style.display = show ? 'none' : 'block';
-        }
-
-        function toast(msg, isError) {
-            const t = document.getElementById('toast');
-            t.innerHTML = (isError ? '❌ ' : '✓ ') + msg;
-            t.classList.add('visible');
-            setTimeout(() => t.classList.remove('visible'), 3000);
-        }
-
-        function showModal(who) {
-            document.getElementById('urgentText').textContent = who + ' 急需使用，是否讓位？';
-            document.getElementById('urgentModal').classList.add('active');
-        }
-
-        function respondUrgent(allow) {
-            document.getElementById('urgentModal').classList.remove('active');
-            if (allow) goOffline();
-            else api('declineUrgent');
-        }
-
-        function copyCode(c) {
-            navigator.clipboard.writeText(c);
-            toast('已複製');
-        }
-    </script>
-</body>
-
-</html>
+// ===== 防頂號系統 Google Apps Script 後端 (Firebase 版) =====
+// 資料庫：Firebase Realtime Database
+// 功能：登入/註冊 + 上線/下線 + 好友 + FCM 推播
+
+const PROJECT_ID = 'antikick-a0da3'; // 您的 Project ID
+const DATABASE_URL = 'https://antikick-a0da3-default-rtdb.firebaseio.com'; // 標準 RTDB URL
+
+// ===== Web App 入口 =====
+function doGet(e) { return handleRequest(e); }
+function doPost(e) { return handleRequest(e); }
+
+function handleRequest(e) {
+  const params = (e && e.parameter) ? e.parameter : {};
+  let body = {};
+  
+  try {
+    if (params.data) {
+      body = JSON.parse(decodeURIComponent(params.data));
+    } else if (e && e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+  } catch (err) {
+    return respond({ success: false, message: '解析錯誤' }, params.callback);
+  }
+  
+  const action = body.action;
+  let result = { success: false, message: '未知操作' };
+  
+  try {
+    switch (action) {
+      case 'register':
+        result = register(body.email, body.password);
+        break;
+      case 'login':
+        result = login(body.email, body.password);
+        break;
+      case 'getStatus':
+        result = getStatus(body.token);
+        break;
+      case 'goOnline':
+        result = goOnline(body.token);
+        break;
+      case 'goOffline':
+        result = goOffline(body.token);
+        break;
+      case 'sendUrgent':
+        result = sendUrgent(body.token);
+        break;
+      case 'declineUrgent':
+        result = declineUrgent(body.token);
+        break;
+      case 'addFriend':
+        result = addFriend(body.token, body.friendCode);
+        break;
+      case 'removeFriend':
+        result = removeFriend(body.token, body.friendId);
+        break;
+      case 'updateFcm':
+        result = updateFcm(body.token, body.fcmToken);
+        break;
+      case 'firebaseLogin': // 新增：處理 Firebase 原生登入
+        result = handleFirebaseLogin(body.uid, body.email, body.fcmToken, body.isAnonymous);
+        break;
+      case 'ping':
+        result = { success: true, message: 'pong' };
+        break;
+      default:
+        result = { success: false, message: '未知操作: ' + action };
+    }
+  } catch (err) {
+    result = { success: false, message: '錯誤: ' + err.toString() };
+    Logger.log(err);
+  }
+  
+  return respond(result, params.callback);
+}
+
+function respond(result, callback) {
+  const json = JSON.stringify(result);
+  
+  // JSONP Mode
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + json + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  
+  // CORS Mode (JSON)
+  return ContentService.createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// 必須讓 doPost 回傳正確的 JSON 並不被 Google 錯誤頁面攔截
+// Google Apps Script 的 doPost 其實很難完美支援 CORS preflight，
+// 但我們可以透過單純的 fetch + no-cors 來觸發寫入，或者依靠 Google 的 redirect 機制。
+// 不過，最穩定的方式還是 TextOutput。
+
+
+// ===== Firebase 工具函數 (REST API) =====
+function getFirebaseToken() {
+  return ScriptApp.getOAuthToken();
+}
+
+function fbRead(path) {
+  const url = `${DATABASE_URL}${path}.json`;
+  const options = {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+    muteHttpExceptions: true
+  };
+  const res = UrlFetchApp.fetch(url, options);
+  if (res.getResponseCode() === 200) {
+    return JSON.parse(res.getContentText());
+  }
+  return null;
+}
+
+function fbWrite(path, data) {
+  const url = `${DATABASE_URL}${path}.json`;
+  const options = {
+    method: 'put',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+    payload: JSON.stringify(data),
+    muteHttpExceptions: true
+  };
+  return UrlFetchApp.fetch(url, options);
+}
+
+function fbUpdate(path, data) {
+  const url = `${DATABASE_URL}${path}.json`;
+  const options = {
+    method: 'patch',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+    payload: JSON.stringify(data),
+    muteHttpExceptions: true
+  };
+  return UrlFetchApp.fetch(url, options);
+}
+
+function fbPush(path, data) {
+  const url = `${DATABASE_URL}${path}.json`;
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+    payload: JSON.stringify(data),
+    muteHttpExceptions: true
+  };
+  return JSON.parse(UrlFetchApp.fetch(url, options).getContentText()); // returns {name: "id"}
+}
+
+function fbDelete(path) {
+  const url = `${DATABASE_URL}${path}.json`;
+  const options = {
+    method: 'delete',
+    headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+    muteHttpExceptions: true
+  };
+  return UrlFetchApp.fetch(url, options);
+}
+
+// ===== 輔助函數 =====
+function generateId() { return Utilities.getUuid(); }
+function generateToken() { return Utilities.getUuid() + '-' + Date.now(); }
+function hashPassword(password) {
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
+  return hash.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
+function encodeEmail(email) { return Utilities.base64EncodeWebSafe(email).replace(/=/g, ''); }
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+  return code;
+}
+
+// ===== 核心邏輯 =====
+
+function register(email, password) {
+  if (!email || !password) return { success: false, message: '請提供 email 和密碼' };
+  
+  const encodedEmail = encodeEmail(email);
+  const existingId = fbRead(`/email_mapping/${encodedEmail}`);
+  if (existingId) return { success: false, message: '此 email 已註冊' };
+  
+  const id = generateId();
+  const friendCode = generateCode();
+  const token = generateToken();
+  const hashedPw = hashPassword(password);
+  
+  const newUser = {
+    id: id,
+    email: email,
+    password: hashedPw,
+    friendCode: friendCode,
+    isOnline: false,
+    lastSeen: new Date().toISOString(),
+    token: token,
+    fcmToken: ''
+  };
+  
+  // 寫入用戶資料 & Email 映射 & Code 映射
+  fbWrite(`/users/${id}`, newUser);
+  fbWrite(`/email_mapping/${encodedEmail}`, id);
+  fbWrite(`/code_mapping/${friendCode}`, id);
+  
+  return {
+    success: true,
+    message: '註冊成功',
+    user: { id, email, friendCode, isOnline: false },
+    token
+  };
+}
+
+function login(email, password) {
+  if (!email || !password) return { success: false, message: '請提供 email 和密碼' };
+  
+  const encodedEmail = encodeEmail(email);
+  const userId = fbRead(`/email_mapping/${encodedEmail}`);
+  
+  if (!userId) return { success: false, message: '用戶不存在' };
+  
+  const user = fbRead(`/users/${userId}`);
+  if (!user || user.password !== hashPassword(password)) {
+    return { success: false, message: '密碼錯誤' };
+  }
+  
+  const newToken = generateToken();
+  fbUpdate(`/users/${userId}`, { 
+    token: newToken, 
+    lastSeen: new Date().toISOString() 
+  });
+  
+  // 如果 status 表裡 token 舊了，其實不需要更新，因為 status 應該存 userId
+  
+  return { success: true, message: '登入成功', user: { id: user.id, email: user.email, friendCode: user.friendCode, isOnline: user.isOnline }, token: newToken };
+}
+
+// 處理 Firebase 原生登入 (Google/匿名)
+function handleFirebaseLogin(uid, email, fcmToken, isAnonymous) {
+  if (!uid) return { success: false, message: '無效的 UID' };
+  
+  // 嘗試透過 UID 查找用戶 (我們將 UID 當作 id 使用，或者建立 mapping)
+  // 為了簡單，我們直接用 Firebase UID 作為用戶 ID
+  
+  let user = fbRead(`/users/${uid}`);
+  const newToken = generateToken();
+  
+  if (!user) {
+    // 新用戶 -> 自動註冊
+    const friendCode = generateCode();
+    // 匿名用戶沒有 email，給個假名
+    const finalEmail = email || (isAnonymous ? `anon_${friendCode}@antikick.app` : `user_${friendCode}@antikick.app`);
+    
+    user = {
+      id: uid, // 使用 Firebase UID
+      email: finalEmail,
+      password: '', // 無密碼
+      friendCode: friendCode,
+      isOnline: false,
+      lastSeen: new Date().toISOString(),
+      token: newToken,
+      fcmToken: fcmToken || '',
+      isAnonymous: !!isAnonymous
+    };
+    
+    fbWrite(`/users/${uid}`, user);
+    fbWrite(`/code_mapping/${friendCode}`, uid);
+    // Email mapping 只有在有 email 時才寫
+    if (email) fbWrite(`/email_mapping/${encodeEmail(email)}`, uid);
+    
+    return { success: true, message: '註冊並登入成功', user: { id: uid, email: finalEmail, friendCode: friendCode }, token: newToken };
+  } else {
+    // 老用戶 -> 更新 Token
+    const updates = { token: newToken, lastSeen: new Date().toISOString() };
+    if (fcmToken) updates.fcmToken = fcmToken;
+    if (email && !user.email.includes('@antikick.app')) {
+       // 如果原本是用 email 註冊的，確保 mapping 存在（雖然 uid 變了... 這是一個整合問題）
+       // 如果這是從舊系統遷移來的 email，邏輯會比較複雜。
+       // 為了簡單，我們假設這是全新系統，或者 Firebase Auth 是主要來源。
+    }
+    
+    fbUpdate(`/users/${uid}`, updates);
+    return { success: true, message: '登入成功', user: { id: uid, email: user.email, friendCode: user.friendCode }, token: newToken };
+  }
+}
+
+// 根據 Token 查找用戶 (這步需要遍歷? 不，我們建立一個 token 索引會更好。但暫時用簡單方法:
+// 為了避免全表掃描，我們在 Login 時可以回傳 ID。
+// 為了兼容性，我們建立一個 Token Mapping: /token_mapping/{token} -> userId
+// (注意：舊代碼沒有這層，我們在 Login/Register 時加上)
+
+// 修正後的 getUserByToken，解決 UrlFetch URL 參數問題
+function getUserByToken(token) {
+    if (!token) return null;
+    
+    // Firebase REST API 要求字串值查詢要加上引號
+    // 例如 equalTo="myToken"
+    // 在 URL 中這必須被編碼，變成 equalTo=%22myToken%22
+    
+    // 我們先構建基礎 URL
+    const baseUrl = `${DATABASE_URL}/users.json`;
+    
+    // 正確編碼參數
+    // 1. orderBy="token" -> orderBy=%22token%22
+    // 2. equalTo="VALUE" -> equalTo=%22VALUE%22
+    
+    const tokenEncoded = encodeURIComponent(token);
+    const query = `?orderBy=%22token%22&equalTo=%22${tokenEncoded}%22&limitToFirst=1`;
+    
+    const url = baseUrl + query;
+    
+    const options = { 
+      headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+      muteHttpExceptions: true
+    };
+    
+    try {
+      const res = UrlFetchApp.fetch(url, options);
+      if (res.getResponseCode() !== 200) {
+        Logger.log('Firebase Error (' + res.getResponseCode() + '): ' + res.getContentText());
+        return null;
+      }
+      
+      const data = JSON.parse(res.getContentText());
+      const keys = Object.keys(data || {});
+      if (keys.length > 0) return data[keys[0]];
+    } catch (e) {
+      Logger.log('getUserByToken Error: ' + e);
+      // 如果還是失敗，可能是 token 包含極端特殊字符，這時候只能放棄查詢
+    }
+    return null;
+}
+
+function updateFcm(token, fcmToken) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  fbUpdate(`/users/${user.id}`, { fcmToken: fcmToken });
+  return { success: true, message: 'Token 更新成功' };
+}
+
+function getStatus(token) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  // 更新最後上線時間
+  fbUpdate(`/users/${user.id}`, { lastSeen: new Date().toISOString() });
+  
+  // 獲取全局狀態
+  const status = fbRead(`/status`) || { currentUser: '', urgentFrom: '' };
+  
+  // 獲取好友
+  const friendsMap = fbRead(`/users/${user.id}/friends`) || {};
+  const friends = [];
+  for (const fId in friendsMap) {
+    const fData = fbRead(`/users/${fId}`);
+    if (fData) {
+      friends.push({ id: fData.id, email: fData.email, friendCode: fData.friendCode });
+    }
+  }
+  
+  let urgentRequest = null;
+  if (status.urgentFrom && status.currentUser === user.id) {
+    urgentRequest = { from: status.urgentFrom };
+  }
+  
+  // 獲取 Current User Email 用於顯示
+  let currentEmail = '';
+  if (status.currentUser) {
+    const u = fbRead(`/users/${status.currentUser}`);
+    if (u) currentEmail = u.email;
+  }
+  
+  return {
+    success: true,
+    inUse: !!status.currentUser,
+    currentUser: currentEmail ? currentEmail.split('@')[0].toUpperCase() : '',
+    currentUserId: status.currentUser,
+    onlineUsers: 1, // 暫時難以計算精確的在線人數，除非維護一個 online 列表
+    urgentRequest,
+    user: { id: user.id, email: user.email, friendCode: user.friendCode },
+    friends
+  };
+}
+
+function goOnline(token) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  const status = fbRead(`/status`) || {};
+  
+  if (status.currentUser && status.currentUser !== user.id) {
+    return { success: false, message: '帳號正在被使用中' };
+  }
+  
+  fbUpdate(`/status`, { 
+    currentUser: user.id, 
+    startTime: new Date().toISOString(),
+    urgentFrom: '',
+    urgentTime: ''
+  });
+  
+  return { success: true, message: '已上線' };
+}
+
+function goOffline(token) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  const status = fbRead(`/status`) || {};
+  
+  if (status.currentUser !== user.id) {
+    // 允許強制下線嗎？原本邏輯是不行。
+    // 但如果是自己，就是清除
+    // return { success: false, message: '你不是當前使用者' };
+  }
+  
+  fbUpdate(`/status`, { 
+    currentUser: '', 
+    startTime: '',
+    urgentFrom: '',
+    urgentTime: ''
+  });
+  
+  return { success: true, message: '已下線' };
+}
+
+function sendUrgent(token) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  const status = fbRead(`/status`) || {};
+  if (!status.currentUser) return { success: false, message: '帳號目前沒人使用' };
+  if (status.currentUser === user.id) return { success: false, message: '你就是當前使用者' };
+  
+  const userName = user.email.split('@')[0].toUpperCase();
+  
+  fbUpdate(`/status`, {
+    urgentFrom: userName,
+    urgentTime: new Date().toISOString()
+  });
+  
+  // FCM 推播
+  const targetUser = fbRead(`/users/${status.currentUser}`);
+  if (targetUser && targetUser.fcmToken) {
+    sendFcmNotification(targetUser.fcmToken, '緊急請求', userName + ' 急需使用帳號');
+  }
+  
+  return { success: true, message: '已發送緊急請求' };
+}
+
+function declineUrgent(token) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  fbUpdate(`/status`, { urgentFrom: '', urgentTime: '' });
+  return { success: true, message: '已拒絕' };
+}
+
+function addFriend(token, friendCode) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  const friendId = fbRead(`/code_mapping/${friendCode}`);
+  if (!friendId) return { success: false, message: '找不到此好友代碼' };
+  if (friendId === user.id) return { success: false, message: '不能加自己' };
+  
+  // 檢查是否已有
+  const friends = fbRead(`/users/${user.id}/friends`) || {};
+  if (friends[friendId]) return { success: false, message: '已經是好友了' };
+  
+  // 雙向綁定
+  fbUpdate(`/users/${user.id}/friends`, { [friendId]: true });
+  fbUpdate(`/users/${friendId}/friends`, { [user.id]: true });
+  
+  return { success: true, message: '好友綁定成功' };
+}
+
+function removeFriend(token, friendId) {
+  const user = getUserByToken(token);
+  if (!user) return { success: false, message: '請重新登入' };
+  
+  fbDelete(`/users/${user.id}/friends/${friendId}`);
+  fbDelete(`/users/${friendId}/friends/${user.id}`);
+  
+  return { success: true, message: '已解除綁定' };
+}
+
+// ===== FCM 發送 (V1 API) =====
+function sendFcmNotification(token, title, body) {
+   if (!token || !PROJECT_ID) return;
+   
+   const url = 'https://fcm.googleapis.com/v1/projects/' + PROJECT_ID + '/messages:send';
+   const payload = {
+     message: {
+       token: token,
+       data: { title: title, body: body, action: 'urgent' },
+       android: { priority: 'high' }
+     }
+   };
+   
+   const options = {
+     method: 'post',
+     contentType: 'application/json',
+     headers: { Authorization: 'Bearer ' + getFirebaseToken() },
+     payload: JSON.stringify(payload),
+     muteHttpExceptions: true
+   };
+   
+   try { UrlFetchApp.fetch(url, options); } catch(e) { Logger.log(e); }
+}
+
+// ===== 管理員工具 (慎用) =====
+// 執行此函數將會清空整個 Firebase Realtime Database
+function admin_clearAllData() {
+  const result = fbDelete('/'); // 删除根節點下的所有數據
+  Logger.log('Database cleared: ' + result);
+  return 'Database Cleared';
+}
