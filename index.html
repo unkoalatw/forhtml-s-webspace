@@ -582,28 +582,28 @@
         };
         // ======================
 
-        // Init Firebase
+        // Note: AppId for Web might differ from Android, but usually compatible for Auth.
+        // Ideally check google-services.json -> client[0].oauth_client[0].client_id (Web client)
+
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         const auth = firebase.auth();
 
-
-        const db = firebase.database();
         let token = localStorage.getItem('antikick_web_token') || '';
         let currentUser = null;
         // No pollTimer needed
 
         document.addEventListener('DOMContentLoaded', () => {
-            // ... logic same as before but simpler init ...
+            document.getElementById('apiUrlInput').value = GAS_URL;
+            // Web Token Logi
             if (token) {
-                // Try to validate token via GAS, but start listener in parallel?
-                // For now, simple flow:
                 api('getStatus').then(res => {
                     if (res && res.success) {
                         token = res.user.token || token;
                         currentUser = res.user;
                         initDashboard();
                     } else {
-                        // GAS token 失效，檢查 Firebase auth 狀態
+                        // GAS token invalid, check Firebase
                         auth.onAuthStateChanged(user => { if (user) syncWithGas(user); else logout(); });
                     }
                 });
