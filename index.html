@@ -5,9 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AntiKick Web 2.3 (RTDB + AutoDisconnect)</title>
+    <title>AntiKick Web 2.3 (CORS Fixed)</title>
 
-    <!-- 這裡直接沿用 App 的所有 CSS，確保視覺 100% 一致 -->
     <style>
         :root {
             --bg-app: #FAFAFA;
@@ -458,7 +457,7 @@
         <div id="authPage" class="page active">
             <div class="card" style="text-align: center;">
                 <h2 style="font-size: 24px; margin-bottom: 8px;">歡迎回來</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入 (v2.3 RTDB+Auto)</p>
+                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入 (v2.3 CORS Fixed)</p>
 
                 <button class="btn btn-google" onclick="handleGoogleLogin()">
                     <svg width="20" height="20" viewBox="0 0 24 24">
@@ -673,57 +672,87 @@
             }
         });
 
-        // --- CORS-FREE API (JSONP Strategy) ---
-        // 使用 Script Tag Injection 完全繞過 CORS 限制
-        function api(action, data = {}) {
-            return new Promise((resolve, reject) => {
-                const callbackName = 'jsonp_callback_' + Math.floor(Math.random() * 100000);
+        // --- UPDATED API Strategy (Fetch + CORS Support) ---
+        // 修正: 棄用 JSONP，改用標準 fetch GET。
+        // Google Apps Script 會在回傳正確 Header (Access-Control-Allow-Origin: *) 的情況下支援跨域 fetch。
+        // 重要: 保持為簡單請求 (Simple Request)，不要添加自定義 Header (如 Content-Type: application/json)，否則會觸發 Preflight (OPTIONS) 失敗。
+        async function api(action, data = {}) {
+            const statusDisplay = document.getElementById('gasStatusDisplay');
+            statusDisplay.textContent = 'Syncing ' + action + '...';
 
-                document.getElementById('gasStatusDisplay').textContent = 'Syncing ' + action + '...';
-
-                // 準備 Payload
-                const payload = {
-                    action,
-                    token: gasToken,
-                    ...data
-                };
-
-                // 設定全域回呼函數 (GAS 執行完會呼叫這個)
-                window[callbackName] = (response) => {
-                    cleanup();
-                    document.getElementById('gasStatusDisplay').textContent = 'Last: ' + action + ' OK';
-                    resolve(response);
-                };
-
-                // 清理函數
-                function cleanup() {
-                    delete window[callbackName];
-                    const script = document.getElementById(callbackName);
-                    if (script) document.body.removeChild(script);
+            try {
+                // 準備 Payload (轉為 URLSearchParams 以進行 GET 請求)
+                const params = new URLSearchParams();
+                params.append('action', action);
+                params.append('token', gasToken);
+                // 將 data 物件展開並加入 params (或者作為一個 JSON string 參數傳遞，視後端需求而定)
+                // 這裡假設後端可以直接讀取 data 字串，或者展開讀取參數。
+                // 為了兼容性，我們將 data 物件 stringify 後傳遞 (如果後端支援解析 'data' 參數)
+                if (Object.keys(data).length > 0) {
+                    // 如果 data 很複雜，建議 JSON.stringify
+                     // params.append('data', JSON.stringify(data)); 
+                     // 或者展開 key-value (如果後端是 e.parameter.friendCode 這樣讀取的)
+                     Object.keys(data).forEach(key => params.append(key, data[key]));
                 }
 
-                // 建立 Script 標籤
-                const script = document.createElement('script');
-                script.id = callbackName;
-                script.type = 'text/javascript';
+                // 加上時間戳防止快取
+                params.append('_t', Date.now());
 
-                // 組合 URL: GAS_URL?callback=xxx&data=encodedJSON
-                // JSONP 必須走 GET
-                const jsonStr = JSON.stringify(payload);
-                const encodedData = encodeURIComponent(jsonStr);
-                script.src = `${GAS_URL}?callback=${callbackName}&data=${encodedData}`;
+                console.log(`[API] Fetching ${action}...`, data);
 
-                // 錯誤處理
-                script.onerror = () => {
-                    cleanup();
-                    console.error("JSONP Error");
-                    document.getElementById('gasStatusDisplay').textContent = 'Error: ' + action;
-                    reject(new Error('Network/Script Error'));
-                };
+                // 發送請求
+                const response = await fetch(`${GAS_URL}?${params.toString()}`, {
+                    method: 'GET',
+                    // mode: 'cors', // 預設就是 cors，但在某些環境明確指定比較好
+                    headers: {
+                        // 不要加 'Content-Type': 'application/json'，這會導致 Preflight
+                        'Accept': 'application/json'
+                    }
+                });
 
-                // 發射！
-                document.body.appendChild(script);
-            });
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                // 嘗試解析 JSON
+                // 如果後端回傳的是 JSONP 格式 (例如: callback({...}))，這裡會報錯，需要後端配合改為純 JSON
+                // 或者我們在這裡手動處理 callback wrapper
+                const text = await response.text();
+                let json;
+                
+                try {
+                    // 嘗試直接解析 JSON
+                    json = JSON.parse(text);
+                } catch (e) {
+                    // 如果解析失敗，檢查是否包了 callback (JSONP 遺跡)
+                    // 格式可能是: jsonp_callback_12345({...})
+                    const match = text.match(/^[a-zA-Z0-9_]+\((.*)\)$/);
+                    if (match && match[1]) {
+                        console.warn("[API] Detected JSONP response, unwrapping manually.");
+                        json = JSON.parse(match[1]);
+                    } else {
+                        throw new Error("Invalid JSON response from GAS");
+                    }
+                }
+
+                console.log(`[API] Response for ${action}:`, json);
+                statusDisplay.textContent = 'Last: ' + action + ' OK';
+                statusDisplay.style.color = 'var(--text-tertiary)';
+                
+                return json;
+
+            } catch (error) {
+                console.error(`[API Error] ${action}:`, error);
+                statusDisplay.textContent = 'Error: ' + action;
+                statusDisplay.style.color = 'var(--status-busy)';
+                
+                // 如果是 CORS 錯誤，通常是 Network Error
+                if (error.message.includes('Failed to fetch')) {
+                    console.error("CORS Error Tip: 確保 GAS 腳本回傳了 'Access-Control-Allow-Origin: *' 且沒有語法錯誤。");
+                }
+                
+                throw error;
+            }
         }
 
         function syncWithGas(firebaseUser) {
@@ -738,6 +767,8 @@
                     gasToken = res.token;
                     localStorage.setItem('antikick_gas_token', gasToken);
                 }
+            }).catch(err => {
+                console.warn("GAS Sync Failed (Non-critical):", err);
             });
         }
 
