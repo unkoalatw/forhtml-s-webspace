@@ -68,14 +68,18 @@
         }
     </style>
 
-    <!-- 2. Alpine.js (CDN) -->
+    <!-- 2. Alpine.js Plugins (Collapse) & Core -->
+    <!-- FIX: 必須先載入 Collapse Plugin 才能使用 x-collapse -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 
 <body
     class="bg-app text-primary min-h-screen flex flex-col font-sans pb-24 overflow-x-hidden antialiased selection:bg-gray-200"
     x-data="app()" x-init="initApp()" @auth-change.window="handleAuth($event.detail)"
-    @status-change.window="handleStatus($event.detail)" @friends-change.window="friends = $event.detail">
+    @status-change.window="handleStatus($event.detail)" @friends-change.window="friends = $event.detail"
+    @gas-status.window="gasStatus = $event.detail">
+    <!-- FIX: 新增 gas-status 監聽，避免直接操作 JS 物件導致錯誤 -->
 
     <div class="w-full max-w-[460px] mx-auto px-5 py-6">
 
@@ -363,8 +367,7 @@
 
                 // Init
                 initApp() {
-                    // Pre-bind actions to window for Firebase module to use event dispatching if needed, 
-                    // or we use custom events. Here we listen to windows events.
+                    // Pre-bind actions
                 },
 
                 // Methods
@@ -493,8 +496,9 @@
         let unsubscribeFriends = null;
 
         // --- Helper to update Alpine ---
+        // FIX: 使用 CustomEvent 溝通，不再侵入 Alpine 內部屬性
         const dispatch = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
-        const setGasStatus = (msg) => document.querySelector('[x-data]').__x.$data.gasStatus = msg;
+        const setGasStatus = (msg) => dispatch('gas-status', msg);
 
         // --- Auth Listener ---
         onAuthStateChanged(auth, (user) => {
@@ -502,11 +506,13 @@
             dispatch('auth-change', user ? { uid: user.uid, email: user.email } : null); // Simple User Object
 
             if (user) {
-                // Sync User Info
+                // Sync User Info (with Error Handling for Rules)
                 update(ref(db, 'users/' + user.uid), {
                     email: user.email || 'Guest',
                     uid: user.uid,
                     lastSeen: new Date().toISOString()
+                }).catch(e => {
+                    console.warn("User update denied by Rules (Safe to ignore if Guest)", e);
                 });
 
                 // GAS Token Sync
