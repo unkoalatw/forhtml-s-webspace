@@ -352,17 +352,25 @@
                     const myUid = this.user?.uid;
                     const data = this.status;
 
-                    if (!data.inUse) {
-                        return { icon: '🛡️', title: 'Safe to Use', subtitle: '目前沒人使用', canGoOnline: true, canGoOffline: false, canUrgent: false };
+                    // Filter: Only show "Occupied" if it's Me or My Friend
+                    // If Occupant is Stranger -> Treat as Safe to Use
+                    const isFriend = data.currentUserId && this.friends && this.friends[data.currentUserId];
+                    const isMe = data.currentUserId === myUid;
+                    const isSafe = !data.inUse || (!isMe && !isFriend);
+
+                    if (isSafe) {
+                        return { icon: '🛡️', title: 'Safe to Use', subtitle: '目前無好友使用', canGoOnline: true, canGoOffline: false, canUrgent: false };
                     }
-                    if (data.currentUserId === myUid) {
+                    if (isMe) {
                         // Check Urgent Request
                         if (data.urgentRequest && data.urgentRequest.from && this.modal.type !== 'urgentRecv') {
                             this.showUrgentReceived(data.urgentRequest.from);
                         }
                         return { icon: '⚡', title: 'You are Online', subtitle: '您正在使用帳號', canGoOnline: false, canGoOffline: true, canUrgent: false };
                     }
-                    return { icon: '⛔', title: 'Occupied', subtitle: `${data.currentUser || 'Someone'} 正在使用中`, canGoOnline: false, canGoOffline: false, canUrgent: true };
+                    // Occupied by Friend
+                    const friendName = this.friends[data.currentUserId]?.name || data.currentUser || 'Friend';
+                    return { icon: '⛔', title: 'Occupied', subtitle: `${friendName} 正在使用中`, canGoOnline: false, canGoOffline: false, canUrgent: true };
                 },
 
                 // Init
@@ -509,6 +517,7 @@
         // FIX: 使用 CustomEvent 溝通，不再侵入 Alpine 內部屬性
         const dispatch = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
         const setGasStatus = (msg) => dispatch('gas-status', msg);
+        const getUserLabel = (u) => u.email || `Guest-${u.uid.slice(0, 4)}`;
 
         // --- Auth Listener ---
         onAuthStateChanged(auth, (user) => {
@@ -518,7 +527,7 @@
             if (user) {
                 // Sync User Info (with Error Handling for Rules)
                 update(ref(db, 'users/' + user.uid), {
-                    email: user.email || 'Guest',
+                    email: getUserLabel(user),
                     uid: user.uid,
                     lastSeen: new Date().toISOString()
                 }).catch(e => {
@@ -595,7 +604,7 @@
                 await update(statusRef, {
                     inUse: true,
                     currentUserId: currentUser.uid,
-                    currentUser: currentUser.email || 'Guest',
+                    currentUser: getUserLabel(currentUser),
                     timestamp: Date.now()
                 });
             },
@@ -611,7 +620,7 @@
 
             sendUrgent: async () => {
                 api('sendUrgent');
-                await set(ref(db, 'status/urgentRequest'), { from: currentUser.email || 'Guest', ts: Date.now() });
+                await set(ref(db, 'status/urgentRequest'), { from: getUserLabel(currentUser), ts: Date.now() });
             },
 
             addFriend: (id) => {
