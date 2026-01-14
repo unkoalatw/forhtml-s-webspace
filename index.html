@@ -401,7 +401,12 @@
                         else await window.actions.goOffline();
                         this.showToast(type === 'online' ? '已上線' : '已下線');
                     } catch (e) {
-                        this.showToast(e.message, true);
+                        console.error("[Action Error]", e);
+                        if (e.message && e.message.includes('PERMISSION_DENIED')) {
+                            console.warn("Permission denied suppressed from UI.");
+                        } else {
+                            this.showToast(e.message, true);
+                        }
                     }
                 },
 
@@ -410,8 +415,13 @@
                     try {
                         await window.actions.addFriend(this.friendInput);
                         this.friendInput = '';
-                        this.showToast('已送由請求');
-                    } catch (e) { this.showToast('失敗', true); }
+                        this.showToast('已送出請求');
+                    } catch (e) {
+                        console.error("[Friend Error]", e);
+                        if (!e.message?.includes('PERMISSION_DENIED')) {
+                            this.showToast('失敗: ' + e.message, true);
+                        }
+                    }
                 },
 
                 async removeFriend(fid) {
