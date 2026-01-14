@@ -5,109 +5,53 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AntiKick Web 2.3 (CORS Fixed)</title>
+    <title>AntiKick Web 3.0 (Alpine + Tailwind)</title>
 
-    <style>
-        :root {
-            --bg-app: #FAFAFA;
-            --bg-card: #FFFFFF;
-            --text-primary: #171717;
-            --text-secondary: #737373;
-            --text-tertiary: #A3A3A3;
-            --accent: #171717;
-            --accent-hover: #404040;
-            --accent-bg: #F5F5F5;
-            --status-online: #22C55E;
-            --status-busy: #EF4444;
-            --status-offline: #D4D4D4;
-            --shadow-subtle: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
-            --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
-            --radius-l: 24px;
-            --radius-m: 16px;
-            --radius-s: 12px;
-            --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-            --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    <!-- 1. Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        app: '#FAFAFA',
+                        card: '#FFFFFF',
+                        primary: '#171717',
+                        secondary: '#737373',
+                        tertiary: '#A3A3A3',
+                        online: '#22C55E',
+                        busy: '#EF4444',
+                        offline: '#D4D4D4'
+                    },
+                    boxShadow: {
+                        subtle: '0 4px 20px -2px rgba(0, 0, 0, 0.03)',
+                        float: '0 10px 40px -10px rgba(0, 0, 0, 0.08)'
+                    }
+                }
+            }
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    </script>
+    <style>
+        /* 補充 Tailwind 無法完全函蓋的細節 */
+        body {
             -webkit-tap-highlight-color: transparent;
         }
 
-        body {
-            font-family: var(--font-main);
-            background-color: var(--bg-app);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            padding-bottom: 100px;
+        .btn-press:active {
+            transform: scale(0.96);
         }
 
-        .container {
-            max-width: 460px;
-            margin: 0 auto;
-            padding: 24px 20px;
-            width: 100%;
-        }
-
-        .header {
-            padding: 40px 8px 20px 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .app-title {
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -1px;
-            line-height: 1;
-        }
-
-        .connection-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--status-online);
-            position: relative;
-        }
-
-        .pulse-dot.danger {
-            background-color: var(--status-busy);
-        }
-
-        .pulse-dot.offline {
-            background-color: var(--status-offline);
-        }
-
-        .pulse-dot::after {
+        .pulse-ring::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             border-radius: 50%;
             background-color: inherit;
             opacity: 0.4;
-            animation: pulse-ring 2s infinite;
+            animation: pulse-r 2s infinite;
         }
 
-        @keyframes pulse-ring {
+        @keyframes pulse-r {
             0% {
                 transform: scale(1);
                 opacity: 0.4;
@@ -119,508 +63,415 @@
             }
         }
 
-        .card {
-            background: var(--bg-card);
-            border-radius: var(--radius-l);
-            box-shadow: var(--shadow-subtle);
-            padding: 24px;
-            margin-bottom: 20px;
-            transition: transform 0.2s var(--ease-spring);
-        }
-
-        .status-card {
-            text-align: center;
-            padding: 40px 24px;
-        }
-
-        .status-hero-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            display: inline-block;
-        }
-
-        .status-hero-text {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .status-hero-sub {
-            font-size: 15px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            min-height: 22px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border-radius: var(--radius-m);
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-family: inherit;
-            letter-spacing: -0.2px;
-            margin-bottom: 12px;
-        }
-
-        .btn:active {
-            transform: scale(0.96);
-        }
-
-        .btn-black {
-            background-color: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-google {
-            background-color: #4285F4;
-            color: white;
-            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--accent-bg);
-            color: var(--text-secondary);
-        }
-
-        .btn-text {
-            background: transparent;
-            color: var(--text-secondary);
-            font-size: 14px;
-            padding: 8px;
-            margin-bottom: 0;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 16px;
-            border-radius: var(--radius-m);
-            border: 2px solid var(--accent-bg);
-            background: var(--bg-card);
-            font-size: 16px;
-            color: var(--text-primary);
-            outline: none;
-            transition: all 0.2s;
-            -webkit-appearance: none;
-        }
-
-        .input-field:focus {
-            border-color: var(--accent);
-            background: var(--bg-app);
-        }
-
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 16px;
-            padding: 0 4px;
-        }
-
-        .list-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .friend-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px;
-            background: var(--bg-card);
-            border-radius: var(--radius-m);
-            margin-bottom: 12px;
-            box-shadow: var(--shadow-subtle);
-        }
-
-        .nav-bar {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            border-radius: 100px;
-            box-shadow: var(--shadow-float);
-            padding: 6px;
-            display: flex;
-            z-index: 100;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            max-width: 90%;
-            transition: opacity 0.3s;
-        }
-
-        .nav-tab {
-            padding: 12px 24px;
-            border-radius: 100px;
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            background: transparent;
-        }
-
-        .nav-tab.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 200;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: 0.3s;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal-box {
-            background: white;
-            padding: 32px;
-            border-radius: 32px;
-            width: 85%;
-            max-width: 340px;
-            text-align: center;
-            box-shadow: var(--shadow-float);
-            transform: scale(0.9);
-            transition: 0.3s var(--ease-spring);
-        }
-
-        .modal-overlay.active .modal-box {
-            transform: scale(1);
-        }
-
-        .modal-h2 {
-            font-size: 20px;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .modal-p {
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-
-        .page {
-            display: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s;
-        }
-
-        .page.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .code-badge {
-            background: var(--accent-bg);
-            padding: 8px 16px;
-            border-radius: var(--radius-s);
-            font-family: monospace;
-            font-size: 16px;
-            letter-spacing: 1px;
-            color: var(--text-primary);
-            cursor: pointer;
-            margin-top: 12px;
-            display: inline-block;
-            transition: 0.2s;
-        }
-
-        .code-badge:active {
-            background: #e5e5e5;
-            transform: scale(0.95);
-        }
-
-        .or-divider {
-            text-align: center;
-            margin: 20px 0;
-            color: var(--text-tertiary);
-            font-size: 13px;
-            position: relative;
-        }
-
-        .or-divider::before,
-        .or-divider::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: #E5E5E5;
-        }
-
-        .or-divider::before {
-            left: 0;
-        }
-
-        .or-divider::after {
-            right: 0;
-        }
-
-        #toast {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: white;
-            color: var(--text-primary);
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: var(--shadow-float);
-            opacity: 0;
-            transition: all 0.4s var(--ease-spring);
-            z-index: 300;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-        }
-
-        #toast.visible {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* Modal for generic confirmation */
-        #confirmModal .modal-h2 {
-            color: var(--text-primary);
+        [x-cloak] {
+            display: none !important;
         }
     </style>
+
+    <!-- 2. Alpine.js (CDN) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
 </head>
 
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="app-title">AntiKick</div>
-            <div class="connection-indicator">
-                <div id="connDot" class="pulse-dot offline"></div>
-                <span id="connText">Init...</span>
+<body
+    class="bg-app text-primary min-h-screen flex flex-col font-sans pb-24 overflow-x-hidden antialiased selection:bg-gray-200"
+    x-data="app()" x-init="initApp()" @auth-change.window="handleAuth($event.detail)"
+    @status-change.window="handleStatus($event.detail)" @friends-change.window="friends = $event.detail">
+
+    <div class="w-full max-w-[460px] mx-auto px-5 py-6">
+
+        <!-- Header -->
+        <div class="pt-10 pb-5 px-2 flex justify-between items-end">
+            <h1 class="text-3xl font-extrabold tracking-tight leading-none">AntiKick</h1>
+            <div class="flex items-center gap-1.5 text-[13px] font-medium text-secondary">
+                <div class="w-2 h-2 rounded-full relative" :class="{
+                        'bg-online pulse-ring': connState === 'online',
+                        'bg-busy pulse-ring': connState === 'danger',
+                        'bg-offline': connState === 'offline'
+                     }"></div>
+                <span x-text="connText">Init...</span>
             </div>
         </div>
 
         <!-- AUTH PAGE -->
-        <div id="authPage" class="page active">
-            <div class="card" style="text-align: center;">
-                <h2 style="font-size: 24px; margin-bottom: 8px;">歡迎回來</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 32px;">Web 版登入 (v2.3 CORS Fixed)</p>
+        <div x-show="page === 'auth'" x-transition.opacity.duration.300ms class="space-y-5">
+            <div class="bg-card rounded-3xl shadow-subtle p-8 text-center transition hover:shadow-float">
+                <h2 class="text-2xl font-bold mb-2">歡迎回來</h2>
+                <p class="text-secondary mb-8">Web 3.0 (Tailwind + Alpine)</p>
 
-                <button class="btn btn-google" onclick="handleGoogleLogin()">
-                    <svg width="20" height="20" viewBox="0 0 24 24">
+                <!-- Buttons -->
+                <button @click="actions.loginGoogle"
+                    class="w-full py-4 rounded-2xl bg-[#4285F4] text-white font-semibold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 btn-press transition">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#FFF">
                         <path
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            fill="#FFF" />
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                         <path
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            fill="#FFF" />
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                         <path
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z"
-                            fill="#FFF" />
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" />
                         <path
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                            fill="#FFF" />
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
                     使用 Google 登入
                 </button>
 
-                <div class="or-divider">或者</div>
-
-                <div id="emailForm" style="display: none; text-align: left; margin-bottom: 20px;">
-                    <div class="input-group">
-                        <label class="input-label">Email</label>
-                        <input type="email" id="email" class="input-field" placeholder="name@example.com">
+                <div class="relative py-5 text-center text-[13px] text-tertiary">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-100"></div>
                     </div>
-                    <div class="input-group">
-                        <label class="input-label">Password</label>
-                        <input type="password" id="password" class="input-field" placeholder="••••••••">
-                    </div>
-                    <button class="btn btn-black" onclick="handleEmailLogin()">登入 / 註冊</button>
-                    <button class="btn btn-text" onclick="toggleEmailForm(false)" style="width:100%">返回</button>
+                    <span class="relative bg-card px-2">或者</span>
                 </div>
 
-                <button id="emailBtn" class="btn btn-outline" onclick="toggleEmailForm(true)">
-                    使用 Email 登入
-                </button>
+                <!-- Email Form -->
+                <div x-show="showEmailForm" x-collapse>
+                    <div class="space-y-4 text-left mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary uppercase mb-2">Email</label>
+                            <input x-model="email" type="email"
+                                class="w-full p-4 rounded-2xl border-2 border-gray-100 bg-card text-primary focus:border-primary focus:bg-app outline-none transition"
+                                placeholder="name@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary uppercase mb-2">Password</label>
+                            <input x-model="password" type="password"
+                                class="w-full p-4 rounded-2xl border-2 border-gray-100 bg-card text-primary focus:border-primary focus:bg-app outline-none transition"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button @click="actions.loginEmail(email, password)"
+                        class="w-full py-4 mb-3 rounded-2xl bg-primary text-white font-semibold shadow-xl shadow-black/10 btn-press transition">登入
+                        / 註冊</button>
+                    <button @click="showEmailForm = false"
+                        class="w-full py-2 text-sm text-secondary hover:text-primary transition">返回</button>
+                </div>
 
-                <button class="btn btn-text" onclick="handleGuestLogin()">
-                    以訪客身分繼續
-                </button>
+                <div x-show="!showEmailForm">
+                    <button @click="showEmailForm = true"
+                        class="w-full py-4 mb-3 rounded-2xl border-2 border-gray-100 text-secondary font-semibold hover:border-gray-200 btn-press transition">使用
+                        Email 登入</button>
+                    <button @click="actions.loginGuest"
+                        class="text-sm text-secondary hover:text-primary transition p-2">以訪客身分繼續</button>
+                </div>
             </div>
         </div>
 
         <!-- DASHBOARD -->
-        <div id="dashboardPage" class="page">
-            <div class="card status-card">
-                <div id="mainStatusIcon" class="status-hero-icon">🛡️</div>
-                <div id="mainStatusText" class="status-hero-text">Connecting...</div>
-                <div id="mainStatusSub" class="status-hero-sub">建立連線中...</div>
+        <div x-show="page === 'dashboard'" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+            class="space-y-5" x-cloak>
 
-                <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px;">
-                    <button id="goOnlineBtn" class="btn btn-black" onclick="updateStatus('online')">⚡ 上線 (Go
-                        Online)</button>
-                    <button id="goOfflineBtn" class="btn btn-black" onclick="updateStatus('offline')"
-                        style="display:none; background: var(--text-tertiary);">💤 下線 (Go Offline)</button>
-                    <button id="urgentBtn" class="btn btn-outline" onclick="openUrgentConfirm()"
-                        style="display:none; border-color: var(--status-busy); color: var(--status-busy);">
-                        ⚠️ 發送緊急請求
-                    </button>
+            <!-- Status Card -->
+            <div class="bg-card rounded-3xl shadow-subtle p-8 text-center transition-all duration-300"
+                :class="{'shadow-float bg-white': !status.inUse, 'bg-gray-50 border border-gray-100': status.inUse}">
+
+                <div class="text-5xl mb-4" x-text="statusUI.icon"></div>
+                <div class="text-2xl font-bold tracking-tight mb-2 text-primary" x-text="statusUI.title"></div>
+                <div class="text-sm text-secondary leading-relaxed min-h-[22px]" x-text="statusUI.subtitle"></div>
+
+                <div class="mt-8 flex flex-col gap-3">
+                    <!-- Actions -->
+                    <template x-if="statusUI.canGoOnline">
+                        <button @click="updateStatus('online')"
+                            class="w-full py-4 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-black/10 flex items-center justify-center gap-2 btn-press transition">
+                            ⚡ 上線 (Go Online)
+                        </button>
+                    </template>
+
+                    <template x-if="statusUI.canGoOffline">
+                        <button @click="updateStatus('offline')"
+                            class="w-full py-4 rounded-2xl bg-gray-200 text-secondary font-bold flex items-center justify-center gap-2 btn-press transition hover:bg-gray-300 hover:text-primary">
+                            💤 下線 (Go Offline)
+                        </button>
+                    </template>
+
+                    <template x-if="statusUI.canUrgent">
+                        <button @click="confirmAction('urgent')"
+                            class="w-full py-4 rounded-2xl border-2 border-busy text-busy font-bold flex items-center justify-center gap-2 btn-press transition hover:bg-red-50">
+                            ⚠️ 發送緊急請求
+                        </button>
+                    </template>
                 </div>
             </div>
 
-            <div class="card" style="padding: 16px;">
-                <h4 style="margin-bottom:12px; color:var(--text-secondary); font-size:12px; text-transform:uppercase;">
-                    Current Session</h4>
-                <div
-                    style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                    <span style="color: var(--text-secondary);">使用者</span>
-                    <span id="currentUserDisplay"
-                        style="font-weight: 700; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">--</span>
+            <!-- Info Card -->
+            <div class="bg-card rounded-3xl shadow-subtle p-5">
+                <h4 class="mb-3 text-xs font-bold text-secondary uppercase tracking-wider">Session Info</h4>
+                <div class="flex justify-between py-2 border-b border-gray-100 items-baseline">
+                    <span class="text-secondary text-sm">使用者</span>
+                    <span class="font-bold text-primary truncate max-w-[150px]" x-text="niceID(user?.email)"></span>
                 </div>
-                <div
-                    style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                    <span style="color: var(--text-secondary);">GAS Status</span>
-                    <span id="gasStatusDisplay"
-                        style="font-weight: 500; font-size:12px; color:var(--text-tertiary)">Idle</span>
+                <div class="flex justify-between py-2 text-xs items-baseline">
+                    <span class="text-secondary">GAS Status</span>
+                    <span class="font-medium text-tertiary" x-text="gasStatus">Idle</span>
                 </div>
             </div>
         </div>
 
         <!-- FRIENDS -->
-        <div id="friendsPage" class="page">
-            <div class="card" style="text-align: center;">
-                <div style="color: var(--text-secondary); margin-bottom: 8px;">您的好友代碼 (ID)</div>
-                <div id="myCode" class="code-badge" onclick="copyCode()">------</div>
-                <div style="font-size:12px; color: var(--text-tertiary); margin-top:8px;">點擊複製</div>
+        <div x-show="page === 'friends'" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+            class="space-y-5" x-cloak>
+            <div class="bg-card rounded-3xl shadow-subtle p-6 text-center">
+                <div class="text-secondary text-sm mb-2">您的好友代碼 (ID)</div>
+                <div @click="copyCode"
+                    class="inline-block bg-gray-100 px-4 py-2 rounded-xl font-mono text-base tracking-widest text-primary cursor-pointer active:scale-95 transition select-all"
+                    x-text="user?.uid || '---'"></div>
+                <div class="text-xs text-tertiary mt-2">點擊複製</div>
             </div>
 
-            <div class="input-group">
-                <label class="input-label">新增好友</label>
-                <input type="text" id="friendCodeInput" class="input-field" placeholder="輸入好友 ID">
-                <button class="btn btn-black" style="margin-top: 12px;" onclick="addFriend()">加入好友</button>
+            <div>
+                <label class="block text-xs font-bold text-secondary uppercase mb-2 pl-1">Add Friend</label>
+                <div class="flex gap-2">
+                    <input x-model="friendInput" type="text"
+                        class="flex-1 p-4 rounded-2xl border-2 border-gray-100 bg-card text-primary focus:border-primary outline-none transition"
+                        placeholder="輸入好友 ID">
+                    <button @click="addFriend"
+                        class="px-6 rounded-2xl bg-primary text-white font-bold shadow-lg btn-press transition">Add</button>
+                </div>
             </div>
 
-            <div class="list-header">
-                <span class="list-title">好友列表</span>
-            </div>
-            <div id="friendsList">
-                <div style="text-align:center; color:var(--text-tertiary); padding:20px;">尚無好友</div>
+            <div>
+                <div class="text-lg font-bold text-primary mb-4 px-1">好友列表</div>
+                <div class="space-y-3">
+                    <template x-for="(f, fid) in friends" :key="fid">
+                        <div class="flex items-center justify-between p-4 bg-card rounded-2xl shadow-subtle">
+                            <div>
+                                <div class="font-bold text-sm text-primary" x-text="f.name || f.email || 'Friend'">
+                                </div>
+                                <div class="text-xs text-secondary mt-0.5 font-mono" x-text="f.friendCode || fid"></div>
+                            </div>
+                            <button @click="removeFriend(fid)"
+                                class="text-sm text-busy font-medium hover:opacity-70 px-2 py-1">移除</button>
+                        </div>
+                    </template>
+                    <div x-show="Object.keys(friends).length === 0" class="text-center text-tertiary py-8 text-sm">
+                        尚無好友
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- SETTINGS -->
-        <div id="settingsPage" class="page">
-            <div class="card">
-                <h3 style="margin-bottom: 16px;">帳號資訊</h3>
-                <div class="input-group">
-                    <label class="input-label">Email / ID</label>
-                    <div id="settingsName" style="font-size: 18px; font-weight: 600; word-break: break-all;">--</div>
+        <div x-show="page === 'settings'" x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+            class="space-y-5" x-cloak>
+            <div class="bg-card rounded-3xl shadow-subtle p-6 space-y-4">
+                <h3 class="text-lg font-bold mb-2">帳號資訊</h3>
+                <div>
+                    <div class="text-xs font-bold text-secondary uppercase mb-1">Email / ID</div>
+                    <div class="text-lg font-semibold break-all" x-text="user?.email || 'Guest'"></div>
                 </div>
-                <div class="input-group">
-                    <label class="input-label">狀態</label>
-                    <div style="font-size: 14px; color: var(--status-online);">● 系統正常運作中</div>
+                <div>
+                    <div class="text-xs font-bold text-secondary uppercase mb-1">狀態</div>
+                    <div class="text-sm text-online flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-online"></span> 系統正常運作中
+                    </div>
                 </div>
             </div>
-            <button class="btn btn-outline" onclick="handleLogout()">登出</button>
+            <button @click="actions.logout"
+                class="w-full py-4 rounded-2xl border-2 border-gray-200 text-secondary font-bold hover:border-gray-300 hover:text-primary transition">登出</button>
         </div>
+
     </div>
 
     <!-- Bottom Nav -->
-    <div id="bottomNav" class="nav-bar" style="display: none;">
-        <button class="nav-tab active" onclick="showPage('dashboard')">Home</button>
-        <button class="nav-tab" onclick="showPage('friends')">Friends</button>
-        <button class="nav-tab" onclick="showPage('settings')">Settings</button>
+    <div x-show="user" x-transition
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md rounded-full shadow-float p-1.5 flex z-50 border border-black/5 max-w-[90%]"
+        x-cloak>
+        <button @click="page = 'dashboard'"
+            :class="page === 'dashboard' ? 'bg-primary text-white shadow-md' : 'text-secondary hover:bg-gray-100'"
+            class="px-6 py-3 rounded-full text-sm font-bold transition-all duration-200">Home</button>
+        <button @click="page = 'friends'"
+            :class="page === 'friends' ? 'bg-primary text-white shadow-md' : 'text-secondary hover:bg-gray-100'"
+            class="px-6 py-3 rounded-full text-sm font-bold transition-all duration-200">Friends</button>
+        <button @click="page = 'settings'"
+            :class="page === 'settings' ? 'bg-primary text-white shadow-md' : 'text-secondary hover:bg-gray-100'"
+            class="px-6 py-3 rounded-full text-sm font-bold transition-all duration-200">Settings</button>
     </div>
 
-    <!-- Modal: Urgent Request -->
-    <div id="urgentModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-h2">緊急插隊請求</div>
-            <p id="urgentText" class="modal-p">有人急需使用，是否讓位？</p>
-            <div style="display: flex; gap: 12px; flex-direction: column;">
-                <button class="btn btn-black" onclick="respondUrgent(true)">確認讓位 (下線)</button>
-                <button class="btn btn-outline" onclick="respondUrgent(false)">拒絕</button>
+    <!-- Modals -->
+    <!-- Generic Modal Overlay -->
+    <div x-show="modal.type" x-transition.opacity
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] flex items-center justify-center pointer-events-auto"
+        x-cloak>
+        <div x-show="modal.type" x-transition:enter="transition ease-spring duration-300"
+            x-transition:enter-start="scale-90 opacity-0" x-transition:enter-end="scale-100 opacity-100"
+            class="bg-white p-8 rounded-[32px] w-[85%] max-w-[340px] text-center shadow-float">
+            <h2 class="text-xl font-extrabold mb-3 text-primary" x-text="modal.title">Title</h2>
+            <p class="text-secondary mb-6 leading-relaxed" x-text="modal.text">Text</p>
+            <div class="flex flex-col gap-3">
+                <button @click="modal.confirm()"
+                    class="w-full py-3.5 rounded-2xl bg-primary text-white font-bold shadow-lg btn-press"
+                    x-text="modal.confirmText">Confirm</button>
+                <button @click="modal.type = null"
+                    class="w-full py-3.5 rounded-2xl border-2 border-gray-100 text-secondary font-bold hover:bg-gray-50 transition">Cancel</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Generic Confirm -->
-    <div id="confirmModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-h2">確認</div>
-            <p id="confirmText" class="modal-p">確定執行此操作？</p>
-            <div style="display: flex; gap: 12px;">
-                <button id="confirmBtn" class="btn btn-black">確定</button>
-                <button class="btn btn-outline" onclick="closeConfirm()">取消</button>
-            </div>
-        </div>
+    <!-- Toast -->
+    <div x-show="toast.visible" x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 -translate-y-4"
+        class="fixed top-6 left-1/2 -translate-x-1/2 bg-white px-6 py-3 rounded-full shadow-float z-[300] flex items-center gap-2 font-bold text-sm pointer-events-none"
+        :style="toast.isError ? 'color: var(--status-busy)' : 'color: var(--text-primary)'" x-cloak>
+        <span x-text="toast.isError ? '✕' : '✓'"></span>
+        <span x-text="toast.msg">Success</span>
     </div>
 
-    <div id="toast" class="toast-msg"><span>✓</span> <span id="toastText">Success</span></div>
+    <!-- Alpine Logic -->
+    <script>
+        function app() {
+            return {
+                page: 'auth',
+                user: null,
+                connState: 'offline', // offline, online, danger
+                connText: 'Init...',
+                gasStatus: 'Idle',
 
-    <!-- Firebase Logic Type Module -->
+                // Form Data
+                email: '',
+                password: '',
+                showEmailForm: false,
+                friendInput: '',
+
+                // Data
+                status: { inUse: false },
+                friends: {},
+
+                // UI State
+                toast: { visible: false, msg: '', isError: false },
+                modal: { type: null, title: '', text: '', confirm: null, confirmText: 'OK' },
+
+                // Computed UI
+                get statusUI() {
+                    const myUid = this.user?.uid;
+                    const data = this.status;
+
+                    if (!data.inUse) {
+                        return { icon: '🛡️', title: 'Safe to Use', subtitle: '目前沒人使用', canGoOnline: true, canGoOffline: false, canUrgent: false };
+                    }
+                    if (data.currentUserId === myUid) {
+                        // Check Urgent Request
+                        if (data.urgentRequest && data.urgentRequest.from && this.modal.type !== 'urgentRecv') {
+                            this.showUrgentReceived(data.urgentRequest.from);
+                        }
+                        return { icon: '⚡', title: 'You are Online', subtitle: '您正在使用帳號', canGoOnline: false, canGoOffline: true, canUrgent: false };
+                    }
+                    return { icon: '⛔', title: 'Occupied', subtitle: `${data.currentUser || 'Someone'} 正在使用中`, canGoOnline: false, canGoOffline: false, canUrgent: true };
+                },
+
+                // Init
+                initApp() {
+                    // Pre-bind actions to window for Firebase module to use event dispatching if needed, 
+                    // or we use custom events. Here we listen to windows events.
+                },
+
+                // Methods
+                niceID(email) {
+                    return email || 'Guest';
+                },
+
+                handleAuth(user) {
+                    this.user = user;
+                    if (user) {
+                        this.page = 'dashboard';
+                        this.showToast('登入成功');
+                        this.connState = 'online';
+                        this.connText = 'Live';
+                    } else {
+                        this.page = 'auth';
+                        this.connState = 'offline';
+                        this.connText = 'Offline';
+                        this.status = { inUse: false };
+                    }
+                },
+
+                handleStatus(data) {
+                    this.status = data || { inUse: false };
+                },
+
+                // Actions wrappers
+                async updateStatus(type) {
+                    try {
+                        if (type === 'online') await window.actions.goOnline();
+                        else await window.actions.goOffline();
+                        this.showToast(type === 'online' ? '已上線' : '已下線');
+                    } catch (e) {
+                        this.showToast(e.message, true);
+                    }
+                },
+
+                async addFriend() {
+                    if (!this.friendInput) return this.showToast('輸入 ID', true);
+                    try {
+                        await window.actions.addFriend(this.friendInput);
+                        this.friendInput = '';
+                        this.showToast('已送由請求');
+                    } catch (e) { this.showToast('失敗', true); }
+                },
+
+                async removeFriend(fid) {
+                    await window.actions.removeFriend(fid);
+                    this.showToast('已移除');
+                },
+
+                // UI Helpers
+                showToast(msg, isError = false) {
+                    this.toast = { visible: true, msg, isError };
+                    setTimeout(() => this.toast.visible = false, 3000);
+                },
+
+                confirmAction(type) {
+                    if (type === 'urgent') {
+                        this.modal = {
+                            type: 'confirm',
+                            title: '緊急插隊',
+                            text: '確定要發送緊急插隊通知嗎？對方會收到彈窗。',
+                            confirmText: '發送',
+                            confirm: async () => {
+                                await window.actions.sendUrgent();
+                                this.modal.type = null;
+                                this.showToast('已發送');
+                            }
+                        };
+                    }
+                },
+
+                showUrgentReceived(from) {
+                    // Prevent loops
+                    if (document.visibilityState === 'visible') {
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    }
+                    this.modal = {
+                        type: 'urgentRecv',
+                        title: '緊急插隊請求',
+                        text: `${from} 急需使用，是否讓位？`,
+                        confirmText: '讓位 (下線)',
+                        confirm: async () => {
+                            await window.actions.goOffline(); // This handles decline/accept logic implicitly by going offline
+                            this.modal.type = null;
+                            this.showToast('您已讓位');
+                        }
+                    };
+                },
+
+                copyCode() {
+                    navigator.clipboard.writeText(this.user?.uid || '');
+                    this.showToast('ID 已複製');
+                }
+            }
+        }
+    </script>
+
+    <!-- Firebase Logic (Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // 加入 onDisconnect 引用
-        import { getDatabase, ref, set, get, onValue, update, remove, child, onDisconnect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-        // --- Configuration ---
+        // CONFIG
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbwYmhhdVdSqnLqrPOZPbeLZ1Yq4M9lSQYy-My8lITeNiVHxzDo8_kFK6AuoHLyMfeEh/exec';
-
         const firebaseConfig = {
             apiKey: "AIzaSyA9UtCVLFiJbM69ZViWjI7Vc-0RLm39zYc",
             authDomain: "antikick-a0da3.firebaseapp.com",
@@ -631,457 +482,132 @@
             appId: "1:260741206992:web:ce31872bc9776f87c31fd5"
         };
 
-        // Init
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
 
-        // Global State
+        // State
         let currentUser = null;
         let gasToken = localStorage.getItem('antikick_gas_token') || '';
         let unsubscribeStatus = null;
         let unsubscribeFriends = null;
 
-        // --- Auth Logic ---
+        // --- Helper to update Alpine ---
+        const dispatch = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+        const setGasStatus = (msg) => document.querySelector('[x-data]').__x.$data.gasStatus = msg;
 
-        // Listen for Auth Changes
+        // --- Auth Listener ---
         onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            dispatch('auth-change', user ? { uid: user.uid, email: user.email } : null); // Simple User Object
+
             if (user) {
-                currentUser = user;
-                const userRef = ref(db, 'users/' + user.uid);
-                // 建議 Android App 端也要讀取這個 path，確保 ID 欄位名稱一致 (uid vs id)
-                update(userRef, {
+                // Sync User Info
+                update(ref(db, 'users/' + user.uid), {
                     email: user.email || 'Guest',
                     uid: user.uid,
                     lastSeen: new Date().toISOString()
                 });
 
-                syncWithGas(user);
+                // GAS Token Sync
+                api('firebaseLogin', { uid: user.uid, email: user.email || '', isAnonymous: user.isAnonymous })
+                    .then(res => { if (res?.token) gasToken = res.token; });
 
-                initDashboard();
-                showPage('dashboard');
-                document.getElementById('bottomNav').style.display = 'flex';
-                toast('登入成功');
+                // Listeners
+                const statusRef = ref(db, 'status');
+                unsubscribeStatus = onValue(statusRef, (snap) => dispatch('status-change', snap.val()));
+
+                const friendsRef = ref(db, 'users/' + user.uid + '/friends');
+                unsubscribeFriends = onValue(friendsRef, (snap) => dispatch('friends-change', snap.val() || {}));
             } else {
-                currentUser = null;
-                showPage('auth');
-                document.getElementById('bottomNav').style.display = 'none';
                 if (unsubscribeStatus) unsubscribeStatus();
-                // 斷線時也建議執行這行，雖然 Firebase 內部會斷開，但前端狀態清空比較保險
-                unsubscribeStatus = null;
+                if (unsubscribeFriends) unsubscribeFriends();
             }
         });
 
-        // --- UPDATED API Strategy (Fetch + CORS Support) ---
-        // 修正: 棄用 JSONP，改用標準 fetch GET。
-        // Google Apps Script 會在回傳正確 Header (Access-Control-Allow-Origin: *) 的情況下支援跨域 fetch。
-        // 重要: 保持為簡單請求 (Simple Request)，不要添加自定義 Header (如 Content-Type: application/json)，否則會觸發 Preflight (OPTIONS) 失敗。
+        // --- GAS API (Stable Fetch GET) ---
         async function api(action, data = {}) {
-            const statusDisplay = document.getElementById('gasStatusDisplay');
-            statusDisplay.textContent = 'Syncing ' + action + '...';
-
+            setGasStatus(action + '...');
             try {
-                // 準備 Payload (轉為 URLSearchParams 以進行 GET 請求)
-                const params = new URLSearchParams();
-                params.append('action', action);
-                params.append('token', gasToken);
-                // 將 data 物件展開並加入 params (或者作為一個 JSON string 參數傳遞，視後端需求而定)
-                // 這裡假設後端可以直接讀取 data 字串，或者展開讀取參數。
-                // 為了兼容性，我們將 data 物件 stringify 後傳遞 (如果後端支援解析 'data' 參數)
-                if (Object.keys(data).length > 0) {
-                    // 如果 data 很複雜，建議 JSON.stringify
-                    // params.append('data', JSON.stringify(data)); 
-                    // 或者展開 key-value (如果後端是 e.parameter.friendCode 這樣讀取的)
-                    Object.keys(data).forEach(key => params.append(key, data[key]));
-                }
+                const params = new URLSearchParams({ action, token: gasToken, _t: Date.now() });
+                Object.keys(data).forEach(k => params.append(k, data[k]));
 
-                // 加上時間戳防止快取
-                params.append('_t', Date.now());
+                const res = await fetch(`${GAS_URL}?${params}`, { method: 'GET', headers: { Accept: 'application/json' } });
+                if (!res.ok) throw new Error(res.status);
 
-                console.log(`[API] Fetching ${action}...`, data);
-
-                // 發送請求
-                const response = await fetch(`${GAS_URL}?${params.toString()}`, {
-                    method: 'GET',
-                    // mode: 'cors', // 預設就是 cors，但在某些環境明確指定比較好
-                    headers: {
-                        // 不要加 'Content-Type': 'application/json'，這會導致 Preflight
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
-
-                // 嘗試解析 JSON
-                // 如果後端回傳的是 JSONP 格式 (例如: callback({...}))，這裡會報錯，需要後端配合改為純 JSON
-                // 或者我們在這裡手動處理 callback wrapper
-                const text = await response.text();
+                // Unwrap JSONP if needed
+                let text = await res.text();
                 let json;
-
-                try {
-                    // 嘗試直接解析 JSON
-                    json = JSON.parse(text);
-                } catch (e) {
-                    // 如果解析失敗，檢查是否包了 callback (JSONP 遺跡)
-                    // 格式可能是: jsonp_callback_12345({...})
-                    const match = text.match(/^[a-zA-Z0-9_]+\((.*)\)$/);
-                    if (match && match[1]) {
-                        console.warn("[API] Detected JSONP response, unwrapping manually.");
-                        json = JSON.parse(match[1]);
-                    } else {
-                        throw new Error("Invalid JSON response from GAS");
-                    }
+                try { json = JSON.parse(text); }
+                catch {
+                    const m = text.match(/^[^(]+\((.*)\)$/);
+                    json = m ? JSON.parse(m[1]) : { success: false };
                 }
 
-                console.log(`[API] Response for ${action}:`, json);
-                statusDisplay.textContent = 'Last: ' + action + ' OK';
-                statusDisplay.style.color = 'var(--text-tertiary)';
-
+                setGasStatus('Idle');
                 return json;
-
-            } catch (error) {
-                console.error(`[API Error] ${action}:`, error);
-                statusDisplay.textContent = 'Error: ' + action;
-                statusDisplay.style.color = 'var(--status-busy)';
-
-                // 如果是 CORS 錯誤，通常是 Network Error
-                if (error.message.includes('Failed to fetch')) {
-                    console.error("CORS Error Tip: 確保 GAS 腳本回傳了 'Access-Control-Allow-Origin: *' 且沒有語法錯誤。");
-                }
-
-                throw error;
-            }
-        }
-
-        function syncWithGas(firebaseUser) {
-            const payload = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email || '',
-                isAnonymous: firebaseUser.isAnonymous,
-            };
-
-            api('firebaseLogin', payload).then(res => {
-                if (res && res.success && res.token) {
-                    gasToken = res.token;
-                    localStorage.setItem('antikick_gas_token', gasToken);
-                }
-            }).catch(err => {
-                console.warn("GAS Sync Failed (Non-critical):", err);
-            });
-        }
-
-        // --- Global Functions for HTML Buttons ---
-        window.handleGuestLogin = () => signInAnonymously(auth).catch(e => toast(e.message, true));
-        window.handleLogout = () => signOut(auth).then(() => {
-            document.getElementById('authPage').classList.add('active');
-            updateConnStatus('offline');
-            localStorage.removeItem('antikick_gas_token');
-            gasToken = '';
-        });
-
-        window.handleGoogleLogin = async () => {
-            const provider = new GoogleAuthProvider();
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/operation-not-supported-in-this-environment') {
-                    // 自動降級為訪客，提升體驗
-                    toast('預覽環境切換為訪客登入', true);
-                    signInAnonymously(auth);
-                } else {
-                    toast('登入失敗: ' + error.message, true);
-                }
-            }
-        };
-
-        window.handleEmailLogin = async () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            if (!email || !password) return toast('請輸入完整資訊', true);
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                    try {
-                        await createUserWithEmailAndPassword(auth, email, password);
-                        toast('註冊並登入成功');
-                    } catch (createErr) {
-                        toast(createErr.message, true);
-                    }
-                } else {
-                    toast(error.message, true);
-                }
-            }
-        };
-
-        window.toggleEmailForm = (show) => {
-            document.getElementById('emailForm').style.display = show ? 'block' : 'none';
-            document.getElementById('emailBtn').style.display = show ? 'none' : 'block';
-        };
-
-        // --- Core App Logic (Using Realtime Database) ---
-
-        function initDashboard() {
-            if (!currentUser) return;
-
-            const displayId = currentUser.email || 'Guest';
-            document.getElementById('currentUserDisplay').textContent = displayId;
-            document.getElementById('settingsName').textContent = displayId;
-            document.getElementById('myCode').textContent = currentUser.uid;
-
-            const statusRef = ref(db, 'status');
-
-            unsubscribeStatus = onValue(statusRef, (snapshot) => {
-                const data = snapshot.val() || { inUse: false };
-                renderStatus(data);
-                updateConnStatus('online');
-            }, (error) => {
-                console.error("Status Listen Error:", error);
-                updateConnStatus('danger');
-            });
-
-            loadFriends();
-        }
-
-        function updateConnStatus(state) {
-            const dot = document.getElementById('connDot');
-            const txt = document.getElementById('connText');
-            if (state === 'online') {
-                dot.className = 'pulse-dot';
-                txt.textContent = 'Live';
-            } else if (state === 'danger') {
-                dot.className = 'pulse-dot danger';
-                txt.textContent = 'Error';
-            } else {
-                dot.className = 'pulse-dot offline';
-                txt.textContent = 'Offline';
-            }
-        }
-
-        function renderStatus(data) {
-            const icon = document.getElementById('mainStatusIcon');
-            const text = document.getElementById('mainStatusText');
-            const sub = document.getElementById('mainStatusSub');
-            const btnOnline = document.getElementById('goOnlineBtn');
-            const btnOffline = document.getElementById('goOfflineBtn');
-            const btnUrgent = document.getElementById('urgentBtn');
-
-            if (!data.inUse) {
-                icon.textContent = '🛡️';
-                text.textContent = 'Safe to Use';
-                sub.textContent = '目前沒人使用';
-                btnOnline.style.display = 'flex';
-                btnOffline.style.display = 'none';
-                btnUrgent.style.display = 'none';
-                document.body.style.backgroundColor = 'var(--bg-app)';
-            } else if (data.currentUserId === currentUser.uid) {
-                icon.textContent = '⚡';
-                text.textContent = 'You are Online';
-                sub.textContent = '您正在使用帳號';
-                btnOnline.style.display = 'none';
-                btnOffline.style.display = 'flex';
-                btnUrgent.style.display = 'none';
-
-                if (data.urgentRequest && data.urgentRequest.from) {
-                    showUrgentModal(data.urgentRequest.from);
-                }
-            } else {
-                icon.textContent = '⛔';
-                text.textContent = 'Occupied';
-                const userName = data.currentUser || 'Someone';
-                sub.textContent = `${userName} 正在使用中`;
-                btnOnline.style.display = 'none';
-                btnOffline.style.display = 'none';
-                btnUrgent.style.display = 'flex';
-            }
-        }
-
-        // --- Actions ---
-
-        window.updateStatus = async (action) => {
-            const statusRef = ref(db, 'status');
-            const userEmail = currentUser.email || 'Guest';
-
-            try {
-                if (action === 'online') {
-                    api('goOnline'); // Call GAS
-                    // Optimistic update
-                    await update(statusRef, {
-                        inUse: true,
-                        currentUserId: currentUser.uid,
-                        currentUser: userEmail,
-                        timestamp: Date.now()
-                    });
-
-                    // --- 關鍵補充: onDisconnect ---
-                    // 這是 RTDB 最大的優勢，當網頁關閉或斷網時，自動將狀態改回 false
-                    // 這樣才不會因為使用者直接關掉視窗而導致狀態卡死
-                    const onDisconnectRef = onDisconnect(statusRef);
-                    await onDisconnectRef.update({
-                        inUse: false,
-                        currentUserId: null,
-                        currentUser: null
-                    });
-
-                    toast('已上線');
-                } else if (action === 'offline') {
-                    api('goOffline'); // Call GAS
-                    await update(statusRef, {
-                        inUse: false,
-                        currentUserId: null,
-                        currentUser: null
-                    });
-                    // 手動下線後，取消 onDisconnect 監聽 (雖然保留也無害，但取消比較乾淨)
-                    const onDisconnectRef = onDisconnect(statusRef);
-                    onDisconnectRef.cancel();
-
-                    toast('已下線');
-                }
             } catch (e) {
-                toast('操作失敗: ' + e.message, true);
+                console.error(e);
+                setGasStatus('Error');
+                return { success: false };
             }
-        };
-
-        // Urgent Logic
-        window.openUrgentConfirm = () => {
-            const modal = document.getElementById('confirmModal');
-            document.getElementById('confirmText').textContent = '確定要發送緊急插隊通知嗎？對方會收到彈窗。';
-            document.getElementById('confirmBtn').onclick = async () => {
-                modal.classList.remove('active');
-                await sendUrgentRequest();
-            };
-            modal.classList.add('active');
         }
 
-        window.closeConfirm = () => {
-            document.getElementById('confirmModal').classList.remove('active');
-        }
+        // --- EXPOSE ACTIONS TO ALPINE ---
+        window.actions = {
+            loginGoogle: async () => {
+                const provider = new GoogleAuthProvider();
+                try { await signInWithPopup(auth, provider); }
+                catch (e) {
+                    if (e.code?.includes('unauthorized-domain')) signInAnonymously(auth);
+                    else alert(e.message);
+                }
+            },
+            loginEmail: (email, pass) => signInWithEmailAndPassword(auth, email, pass).catch(e => {
+                if (e.code?.includes('user-not-found')) return createUserWithEmailAndPassword(auth, email, pass);
+                throw e;
+            }),
+            loginGuest: () => signInAnonymously(auth),
+            logout: () => signOut(auth),
 
-        async function sendUrgentRequest() {
-            api('sendUrgent');
-            const statusRef = ref(db, 'status/urgentRequest');
-            try {
-                await set(statusRef, {
-                    from: currentUser.email || 'Guest',
+            goOnline: async () => {
+                if (!currentUser) return;
+                api('goOnline');
+                const statusRef = ref(db, 'status');
+                // AutoDisconnect Logic
+                await onDisconnect(statusRef).update({ inUse: false, currentUserId: null, currentUser: null });
+                await update(statusRef, {
+                    inUse: true,
+                    currentUserId: currentUser.uid,
+                    currentUser: currentUser.email || 'Guest',
                     timestamp: Date.now()
                 });
-                toast('已發送緊急通知');
-            } catch (e) {
-                toast('發送失敗', true);
-            }
-        }
+            },
 
-        function showUrgentModal(who) {
-            const modal = document.getElementById('urgentModal');
-            if (modal.classList.contains('active')) return;
+            goOffline: async () => {
+                api('goOffline');
+                const statusRef = ref(db, 'status');
+                await onDisconnect(statusRef).cancel();
+                await update(statusRef, { inUse: false, currentUserId: null, currentUser: null });
+                // If rejecting urgent
+                remove(ref(db, 'status/urgentRequest'));
+            },
 
-            document.getElementById('urgentText').textContent = `${who} 急需使用，是否讓位？`;
-            modal.classList.add('active');
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        }
+            sendUrgent: async () => {
+                api('sendUrgent');
+                await set(ref(db, 'status/urgentRequest'), { from: currentUser.email || 'Guest', ts: Date.now() });
+            },
 
-        window.respondUrgent = async (allow) => {
-            document.getElementById('urgentModal').classList.remove('active');
-            if (allow) {
-                await window.updateStatus('offline');
-                toast('您已讓位下線');
-            } else {
-                api('declineUrgent');
-                const statusRef = ref(db, 'status/urgentRequest');
-                await remove(statusRef);
-                toast('已拒絕請求');
-            }
-        };
+            addFriend: (id) => {
+                api('addFriend', { friendCode: id });
+                return set(ref(db, `users/${currentUser.uid}/friends/${id}`), { friendCode: id, name: 'Friend' });
+            },
 
-        // --- Friends Logic ---
-        function loadFriends() {
-            const friendsRef = ref(db, 'users/' + currentUser.uid + '/friends');
-            unsubscribeFriends = onValue(friendsRef, (snapshot) => {
-                const list = document.getElementById('friendsList');
-                list.innerHTML = '';
-
-                const val = snapshot.val();
-                if (!val) {
-                    list.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); padding:20px;">尚無好友</div>';
-                    return;
-                }
-
-                Object.keys(val).forEach(key => {
-                    const f = val[key];
-                    const div = document.createElement('div');
-                    div.className = 'friend-row';
-                    div.innerHTML = `
-                        <div>
-                            <div style="font-weight:600; font-size:14px;">${f.name || f.email || 'Friend'}</div>
-                            <div style="font-size:12px; color:#999;">${f.friendCode || key}</div>
-                        </div>
-                        <button class="btn-text" style="color:#EF4444;" onclick="removeFriend('${key}')">移除</button>
-                    `;
-                    list.appendChild(div);
-                });
-            });
-        }
-
-        window.addFriend = async () => {
-            const input = document.getElementById('friendCodeInput');
-            const targetUid = input.value.trim();
-            if (!targetUid) return toast('請輸入 ID', true);
-
-            api('addFriend', { friendCode: targetUid });
-
-            // Optimistic update
-            const friendRef = ref(db, 'users/' + currentUser.uid + '/friends/' + targetUid);
-            try {
-                await set(friendRef, {
-                    friendCode: targetUid,
-                    name: 'Friend ' + targetUid.slice(0, 4)
-                });
-                input.value = '';
-                toast('好友已加入');
-            } catch (e) {
-                toast('加入失敗 (Check Rules)', true);
+            removeFriend: (id) => {
+                api('removeFriend', { friendId: id });
+                return remove(ref(db, `users/${currentUser.uid}/friends/${id}`));
             }
         };
-
-        window.removeFriend = async (fid) => {
-            api('removeFriend', { friendId: fid });
-            const friendRef = ref(db, 'users/' + currentUser.uid + '/friends/' + fid);
-            await remove(friendRef);
-            toast('已移除');
-        };
-
-        // --- UI Utils ---
-        window.showPage = (name) => {
-            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
-            document.getElementById(name + 'Page').classList.add('active');
-
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-            if (name === 'dashboard') document.querySelector('.nav-tab:nth-child(1)').classList.add('active');
-            if (name === 'friends') document.querySelector('.nav-tab:nth-child(2)').classList.add('active');
-            if (name === 'settings') document.querySelector('.nav-tab:nth-child(3)').classList.add('active');
-        }
-
-        window.toast = (msg, isError = false) => {
-            const t = document.getElementById('toast');
-            t.innerHTML = (isError ? '<span>✕</span> ' : '<span>✓</span> ') + msg;
-            t.style.color = isError ? 'var(--status-busy)' : 'var(--text-primary)';
-            t.classList.add('visible');
-            setTimeout(() => t.classList.remove('visible'), 3000);
-        }
-
-        window.copyCode = () => {
-            const code = document.getElementById('myCode').textContent;
-            const el = document.createElement('textarea');
-            el.value = code;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            toast('已複製 ID');
-        }
     </script>
 </body>
 
