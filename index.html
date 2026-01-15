@@ -386,6 +386,7 @@
                 handleAuth(user) {
                     this.user = user;
                     if (user) {
+                        this.requestNotePerm();
                         this.page = 'dashboard';
                         this.showToast('登入成功');
                         this.connState = 'online';
@@ -460,10 +461,13 @@
                 },
 
                 showUrgentReceived(from) {
-                    // Prevent loops
-                    if (document.visibilityState === 'visible') {
-                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    // 1. Web Notification
+                    if (Notification.permission === 'granted') {
+                        try { new Notification("⚠️ 緊急插隊請求", { body: `${from} 急需使用帳號！` }); } catch (e) { }
                     }
+                    // 2. Vibrate
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 100, 500]);
+
                     this.modal = {
                         type: 'urgentRecv',
                         title: '緊急插隊請求',
@@ -480,6 +484,12 @@
                 copyCode() {
                     navigator.clipboard.writeText(this.user?.uid || '');
                     this.showToast('ID 已複製');
+                },
+
+                requestNotePerm() {
+                    if ('Notification' in window && Notification.permission !== 'granted') {
+                        Notification.requestPermission();
+                    }
                 }
             }
         }
